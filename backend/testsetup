@@ -1,0 +1,21 @@
+#!/bin/bash
+# Backend testlarini ishga tushirish
+# backend/ papkasida ishlating
+
+echo "=== Alone AI Backend Tests ==="
+cd "$(dirname "$0")/backend" || exit 1
+
+# Virtual environment
+if [ ! -d "venv" ]; then
+  python3 -m venv venv
+fi
+
+source venv/bin/activate
+pip install -q pytest httpx pytest-asyncio 2>/dev/null
+
+# Testlarni ishga tushirish
+cd app
+python -m pytest ../tests/ -v --tb=short 2>&1
+
+echo ""
+echo "=== Test tugadi ==="

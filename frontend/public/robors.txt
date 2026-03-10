@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+Allow: /premium
+Disallow: /api/
+Disallow: /admin
+Disallow: /chat
+Disallow: /profile
+Disallow: /settings
+
+Sitemap: https://aloneai.uz/sitemap.xml
