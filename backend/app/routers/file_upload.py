@@ -7,7 +7,7 @@ import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from core.jwt import get_current_user
 
-router    = APIRouter()
+router = APIRouter(prefix="/api/upload", tags=["upload"])
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 

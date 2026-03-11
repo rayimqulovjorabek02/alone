@@ -1,21 +1,25 @@
 """
-backend/app/core/tool_selector.py — Savolga mos toollarni tanlash
+core/tool_selector.py
+AI agent tool selector
 """
 
-TOOL_KEYWORDS = {
-    "search":    ["qidir", "topib", "hozir", "bugun", "yangilik", "narx", "kim", "qachon", "qayerda", "bozor", "weather", "ob-havo", "yangi"],
-    "calculate": ["hisob", "qo'sh", "ayir", "ko'payt", "bo'l", "foiz", "summa", "natija", "nechta", "qancha"],
-    "translate": ["tarjima", "o'zbek", "ingliz", "rus", "translate", "inglizcha", "ruscha"],
+TOOLS = {
+    "search": ["search", "news", "yangilik", "kim", "who", "what"],
+    "calculator": ["calculate", "hisobla", "math", "+", "-", "*", "/"],
+    "code": ["code", "python", "program", "bug"],
 }
 
 
-def select_tools(query: str) -> list[str]:
-    """Savolga mos toollarni avtomatik tanlash."""
-    q       = query.lower()
-    tools   = []
+def choose_tool(message: str) -> str:
+    """
+    User message asosida tool tanlash
+    """
 
-    for tool, keywords in TOOL_KEYWORDS.items():
-        if any(kw in q for kw in keywords):
-            tools.append(tool)
+    msg = message.lower()
 
-    return tools or []
+    for tool, keywords in TOOLS.items():
+        for k in keywords:
+            if k in msg:
+                return tool
+
+    return "none"

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from core.jwt import get_current_user
 from database import get_db
 
-router = APIRouter()
+router = APIRouter(prefix="/api/admin-stats", tags=["admin-stats"])
 
 
 def _require_admin(current: dict = Depends(get_current_user)):

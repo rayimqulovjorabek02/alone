@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from typing import Optional
 from core.jwt import get_current_user
 
-router = APIRouter()
+router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 
 DB_NAME = "alone.db"
 

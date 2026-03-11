@@ -51,3 +51,16 @@ async def web_search(query: str) -> str:
         print(f"DuckDuckGo xato: {e}")
 
     return ""
+
+
+# ── Alias — eski import lar uchun moslik ──────────────────────
+def search_web(query: str) -> str:
+    """web_search uchun sync alias."""
+    import asyncio
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            return ""
+        return loop.run_until_complete(web_search(query))
+    except Exception:
+        return ""

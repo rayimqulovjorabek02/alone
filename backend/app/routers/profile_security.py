@@ -8,7 +8,7 @@ from core.jwt import get_current_user
 from core.memory_engine import get_all_memory, save_smart_memory, delete_memory_key, clear_all_memory
 from database import get_db
 
-router = APIRouter()
+router = APIRouter(prefix="/api/profile", tags=["profile"])
 
 
 class ProfileUpdate(BaseModel):

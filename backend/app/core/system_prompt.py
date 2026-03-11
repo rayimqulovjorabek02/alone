@@ -39,3 +39,14 @@ Qobiliyatlaring:
         prompt += "\n\nFoydalanuvchi haqida ma'lumotlar:\n" + "\n".join(mem_lines)
 
     return prompt
+
+
+# ── Alias — eski import lar uchun moslik ──────────────────────
+def build_prompt(memory_profile: dict = None, query: str = "") -> str:
+    """get_system_prompt uchun alias."""
+    if not memory_profile:
+        memory_profile = {}
+    name     = memory_profile.get("ism", "Foydalanuvchi")
+    ai_style = memory_profile.get("ai_style", "friendly")
+    language = memory_profile.get("language", "uz")
+    return get_system_prompt(name, ai_style, language, memory_profile, query)

@@ -1,13 +1,13 @@
 """
-backend/app/routers/auth.py — Ro'yxatdan o'tish, kirish, token yangilash
+backend/app/routers/auth.py
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
 from database import get_user_by_email, create_user, get_db
-from core.jwt import create_access_token, create_refresh_token, decode_token
+from core.jwt import create_access_token, create_refresh_token, decode_token, get_current_user
 
-router = APIRouter()
+router = APIRouter(prefix="/api/auth", tags=["auth"])
 pwd    = CryptContext(schemes=["bcrypt"])
 
 
@@ -32,20 +32,16 @@ async def register(body: RegisterRequest):
     if len(body.password) < 6:
         raise HTTPException(400, "Parol kamida 6 ta belgi")
     if get_user_by_email(body.email):
-        raise HTTPException(400, "Bu email allaqachon ro'yxatdan o'tgan")
+        raise HTTPException(400, "Bu email allaqachon royxatdan otgan")
     uid = create_user(body.username, body.email, pwd.hash(body.password), body.avatar)
-    return {
-        "success": True,
-        "message": "Ro'yxatdan o'tildi",
-        "user_id": uid,
-    }
+    return {"success": True, "message": "Royxatdan otildi", "user_id": uid}
 
 
 @router.post("/login")
 async def login(body: LoginRequest):
     user = get_user_by_email(body.email)
     if not user or not pwd.verify(body.password, user["password"]):
-        raise HTTPException(401, "Email yoki parol noto'g'ri")
+        raise HTTPException(401, "Email yoki parol notogri")
     if not user["is_active"]:
         raise HTTPException(403, "Hisob bloklangan")
     return {
@@ -79,27 +75,17 @@ async def refresh(body: RefreshRequest):
 
 
 @router.get("/me")
-async def me(current=None):
-    from fastapi import Depends
-    from core.jwt import get_current_user
-    # bu endpoint deps bilan ishlaydi
-    pass
-
-from fastapi import Depends
-from core.jwt import get_current_user
-
-@router.get("/me")
 async def get_me(current: dict = Depends(get_current_user)):
     with get_db() as conn:
         user = conn.execute("SELECT * FROM users WHERE id=?", (current["user_id"],)).fetchone()
     if not user:
         raise HTTPException(404, "Topilmadi")
     return {
-        "id":       user["id"],
-        "username": user["username"],
-        "email":    user["email"],
-        "avatar":   user["avatar"],
-        "plan":     user["plan"],
-        "is_admin": bool(user["is_admin"]),
+        "id":         user["id"],
+        "username":   user["username"],
+        "email":      user["email"],
+        "avatar":     user["avatar"],
+        "plan":       user["plan"],
+        "is_admin":   bool(user["is_admin"]),
         "created_at": user["created_at"],
     }

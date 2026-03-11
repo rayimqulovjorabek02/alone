@@ -8,7 +8,7 @@ from core.image_gen import generate_image, STYLE_PROMPTS
 from database import get_usage, increment_usage, get_plan, get_db
 from config import PLANS
 
-router = APIRouter()
+router = APIRouter(prefix="/api/image", tags=["image"])
 
 
 class ImageRequest(BaseModel):

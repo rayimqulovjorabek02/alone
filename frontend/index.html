@@ -4,72 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#7c3aed" />
-  <meta name="description" content="Alone AI — Aqlli shaxsiy yordamchi. Chat, rasm generatsiya, ovoz, agent va ko'p narsa." />
-  <meta name="keywords" content="AI, chatbot, yordamchi, alone ai, GPT, o'zbek" />
-
-  <!-- Open Graph -->
-  <meta property="og:title"       content="Alone AI" />
-  <meta property="og:description" content="Aqlli AI yordamchi" />
-  <meta property="og:type"        content="website" />
-  <meta property="og:url"         content="https://aloneai.uz" />
-
-  <!-- PWA -->
+  <meta name="description" content="Alone AI — Aqlli shaxsiy yordamchi." />
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png" />
-
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-
   <title>Alone AI</title>
-
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0f0f13; color: #f0f0f5; font-family: 'Inter', sans-serif; }
-    #root { height: 100vh; overflow: hidden; }
-
-    /* Loading screen */
-    #loading {
-      position: fixed; inset: 0;
-      display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px;
-      background: #0f0f13; z-index: 9999; transition: opacity .3s;
-    }
-    #loading.hide { opacity: 0; pointer-events: none; }
-    .loader {
-      width: 44px; height: 44px; border-radius: 14px;
-      background: linear-gradient(135deg, #7c3aed, #6d28d9);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px; animation: pulse 1.5s ease infinite;
-    }
-    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
-  </style>
 </head>
 <body>
-  <!-- Loading screen -->
-  <div id="loading">
-    <div class="loader">🤖</div>
+  <div id="loading" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;background:#0f0f13;z-index:9999;transition:opacity .3s">
+    <div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#7c3aed,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:22px">🤖</div>
     <div style="font-size:13px;color:#606070">Yuklanmoqda...</div>
   </div>
-
   <div id="root"></div>
-
   <script type="module" src="/src/main.jsx"></script>
-
-  <!-- PWA service worker -->
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {})
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {})
       })
     }
-    // Hide loader when app mounts
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => {
-        const el = document.getElementById('loading')
-        if (el) el.classList.add('hide')
-        setTimeout(() => el?.remove(), 300)
+        const el = document.getElementById("loading")
+        if (el) { el.style.opacity = "0"; setTimeout(() => el.remove(), 300) }
       }, 800)
     })
   </script>

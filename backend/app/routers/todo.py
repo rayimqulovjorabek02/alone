@@ -7,7 +7,7 @@ from typing import Optional
 from core.jwt import get_current_user
 from database import get_db
 
-router = APIRouter()
+router = APIRouter(prefix="/api/todo", tags=["todo"])
 
 
 class TodoCreate(BaseModel):

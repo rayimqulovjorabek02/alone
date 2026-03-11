@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from core.jwt import get_current_user
 
-router   = APIRouter()
+router = APIRouter(prefix="/api/code", tags=["code"])
 GROQ_KEY = os.getenv("GROQ_API_KEY", "")
 
 
