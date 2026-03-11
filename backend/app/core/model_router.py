@@ -464,7 +464,24 @@ async def routed_chat(
             print(f"[Router] '{model_cfg['name']}' xato: {e}")
             _State.fail(model_cfg["name"])
 
-    yield f"Barcha AI modellar javob bermadi. Xato: {last_error}"
+    # Barcha modellar xato berdi
+    error_msg = "Uzr, hozir AI javob bera olmayapti. Iltimos bir ozdan keyin urinib ko'ring."
+    print(f"[Router] Barcha modellar xato: {last_error}")
+    
+    # DB ga log
+    try:
+        import sqlite3, os, time as _t
+        from config import DB_PATH
+        with sqlite3.connect(DB_PATH) as db:
+            db.execute(
+                "INSERT INTO provider_log (provider, event) VALUES (?,?)",
+                ("all", f"all_failed: {last_error[:200]}")
+            )
+            db.commit()
+    except Exception:
+        pass
+    
+    yield error_msg
 
 
 async def routed_simple(

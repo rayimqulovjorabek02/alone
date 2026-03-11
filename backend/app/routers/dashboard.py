@@ -6,7 +6,7 @@ from core.jwt import get_current_user
 from database import get_db, get_usage, get_plan
 from config import PLANS
 
-router = APIRouter()
+router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
 @router.get("/stats")
