@@ -80,7 +80,13 @@ async def text_to_speech(body: TTSRequest, current: dict = Depends(get_current_u
 
     text = clean_for_tts(body.text)[:3000]
 
-    # 1. ElevenLabs (eng sifatli)
+    # 1. OpenAI TTS (eng ishonchli)
+    audio_b64 = await _openai_tts(text)
+    if audio_b64:
+        increment_usage(current["user_id"], "voice")
+        return {"audio_b64": audio_b64, "engine": "openai-tts"}
+
+    # 2. ElevenLabs
     eleven_key = _elevenlabs_key()
     if eleven_key:
         audio_b64 = await _elevenlabs_tts(text, api_key=eleven_key)
@@ -88,17 +94,24 @@ async def text_to_speech(body: TTSRequest, current: dict = Depends(get_current_u
             increment_usage(current["user_id"], "voice")
             return {"audio_b64": audio_b64, "engine": "elevenlabs"}
 
-    # 2. Edge TTS fallback
+    # 3. Edge TTS
     audio_b64 = await _edge_tts(text, lang=body.lang, gender=body.gender, speed=body.speed)
     if audio_b64:
         increment_usage(current["user_id"], "voice")
         return {"audio_b64": audio_b64, "engine": "edge-tts"}
 
-    # 3. gTTS fallback
+    # 4. gTTS (ru/en fallback)
     audio_b64 = _gtts(text, lang=body.lang, slow=(body.speed == "slow"))
     if audio_b64:
         increment_usage(current["user_id"], "voice")
         return {"audio_b64": audio_b64, "engine": "gtts"}
+
+    # 5. gTTS ru (oxirgi fallback)
+    if body.lang != "ru":
+        audio_b64 = _gtts(text, lang="ru", slow=False)
+        if audio_b64:
+            increment_usage(current["user_id"], "voice")
+            return {"audio_b64": audio_b64, "engine": "gtts-ru"}
 
     raise HTTPException(500, "TTS ishlamadi")
 
@@ -257,9 +270,11 @@ async def _edge_tts(
 
 
 def _gtts(text: str, lang: str = "uz", slow: bool = False) -> str | None:
+    # gTTS uz tilini qo'llab-quvvatlamaydi — ru yoki en ishlatamiz
+    gtts_lang = lang if lang in ("ru", "en") else "ru"
     try:
         from gtts import gTTS
-        tts = gTTS(text=text[:3000], lang=lang, slow=slow)
+        tts = gTTS(text=text[:3000], lang=gtts_lang, slow=slow)
         buf = io.BytesIO()
         tts.write_to_fp(buf)
         data = buf.getvalue()
@@ -267,6 +282,34 @@ def _gtts(text: str, lang: str = "uz", slow: bool = False) -> str | None:
             return base64.b64encode(data).decode()
     except Exception as e:
         print(f"gTTS xato: {e}")
+    return None
+
+
+async def _groq_tts(text: str) -> str | None:
+    """Groq TTS — OpenAI whisper-compatible (hozircha mavjud emas, skip)."""
+    return None
+
+
+async def _openai_tts(text: str, api_key: str = "") -> str | None:
+    """OpenAI TTS — agar OPENAI_API_KEY bo'lsa."""
+    try:
+        import httpx, os
+        key = api_key or os.getenv("OPENAI_API_KEY", "")
+        if not key:
+            print("[OpenAI TTS] OPENAI_API_KEY yo'q")
+            return None
+        print(f"[OpenAI TTS] Urinmoqda: {key[:8]}...")
+        async with httpx.AsyncClient(timeout=30) as c:
+            r = await c.post(
+                "https://api.openai.com/v1/audio/speech",
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                json={"model": "tts-1", "input": text[:4096], "voice": "alloy"},
+            )
+            if r.status_code == 200:
+                return base64.b64encode(r.content).decode()
+            print(f"OpenAI TTS xato: {r.status_code}")
+    except Exception as e:
+        print(f"OpenAI TTS xato: {e}")
     return None
 
 
