@@ -2,8 +2,6 @@
 backend/app/routers/admin.py — Admin panel
 """
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from typing import Optional
 from core.jwt import get_current_user
 from database import get_db
 
@@ -48,8 +46,55 @@ async def toggle_block(user_id: int, current=Depends(_require_admin)):
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: int, current=Depends(_require_admin)):
     with get_db() as conn:
+        # Avval foydalanuvchi borligini tekshir
+        user = conn.execute("SELECT id, is_admin FROM users WHERE id=?", (user_id,)).fetchone()
+        if not user:
+            raise HTTPException(404, "Foydalanuvchi topilmadi")
+
+        # O'z akkauntini o'chirishni taqiqlash
+        if user["id"] == current["user_id"]:
+            raise HTTPException(400, "O'z akkauntingizni o'chira olmaysiz")
+
+        # Admin akkauntini o'chirishni taqiqlash
+        if user["is_admin"]:
+            raise HTTPException(400, "Admin akkauntini o'chirib bo'lmaydi")
+
+        # FOREIGN KEY xatosini oldini olish:
+        # users ga bog'liq barcha jadvallardan ma'lumot o'chirish
+        tables_with_user_id = [
+            "chat_sessions",
+            "messages",
+            "todos",
+            "reminders",
+            "notifications",
+            "feedback",
+            "payments",
+            "subscriptions",
+            "user_settings",
+            "profile_data",
+            "audit_log",
+            "image_generations",
+            "file_uploads",
+            "voice_history",
+            "agent_sessions",
+            "export_history",
+            "two_factor_auth",
+            "password_reset_tokens",
+            "refresh_tokens",
+            "sessions",
+        ]
+
+        for table in tables_with_user_id:
+            try:
+                conn.execute(f"DELETE FROM {table} WHERE user_id=?", (user_id,))
+            except Exception:
+                # Jadval mavjud bo'lmasa — o'tkazib yuborish
+                pass
+
+        # Endi users dan o'chirish
         conn.execute("DELETE FROM users WHERE id=?", (user_id,))
-    return {"success": True}
+
+    return {"success": True, "deleted_user_id": user_id}
 
 
 @router.post("/notify-all")

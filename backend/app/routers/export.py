@@ -1,5 +1,5 @@
 """
-backend/app/routers/export.py — Chat eksport (TXT, JSON, MD)
+backend/app/routers/export.py — Chat eksport
 """
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -7,7 +7,7 @@ import io, json
 from core.jwt import get_current_user
 from database import get_session_messages, get_db
 
-router = APIRouter()
+router = APIRouter(prefix="/api/export", tags=["export"])
 
 
 @router.get("/chat/{session_id}")
@@ -24,18 +24,16 @@ async def export_chat(session_id: int, format: str = "txt", current: dict = Depe
         content  = json.dumps(messages, ensure_ascii=False, indent=2)
         filename = f"{title}.json"
         media    = "application/json"
-
     elif format == "md":
-        lines = [f"# {title}\n"]
+        lines    = [f"# {title}\n"]
         for m in messages:
-            icon = "👤" if m["role"] == "user" else "🤖"
-            lines.append(f"## {icon} {m['role'].capitalize()}\n{m['content']}\n")
+            icon = "U" if m["role"] == "user" else "AI"
+            lines.append(f"## [{icon}]\n{m['content']}\n")
         content  = "\n".join(lines)
         filename = f"{title}.md"
         media    = "text/markdown"
-
-    else:  # txt
-        lines = [f"=== {title} ===\n"]
+    else:
+        lines    = [f"=== {title} ===\n"]
         for m in messages:
             prefix = "SEN" if m["role"] == "user" else "AI"
             lines.append(f"[{prefix}] {m['content']}\n")
@@ -45,4 +43,5 @@ async def export_chat(session_id: int, format: str = "txt", current: dict = Depe
 
     buf = io.BytesIO(content.encode("utf-8"))
     return StreamingResponse(buf, media_type=media,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )

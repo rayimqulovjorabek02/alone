@@ -1,3 +1,4 @@
+""" backend/app/core/file_analysis.py - PDF fayllarni o'qish va natija olish uchun yordamchi funksiyalar"""
 from core.file_reader import read_pdf
 from core.chunking import chunk_text
 from core.embeddings import create_embedding

@@ -12,7 +12,7 @@ Har bir funksiya faqat bir ish qiladi:
   stream_ai()          → sync streaming (eski kod bilan moslik)
 """
 from core.ai_pipeline    import build_context, save_context, apply_filters, DEFAULT_SYSTEM
-from core.model_router_v2 import routed_chat, routed_simple, detect_intent
+from core.model_router import routed_chat, routed_simple, detect_intent
 from core.cache          import get_cache
 from typing import AsyncGenerator, Generator
 

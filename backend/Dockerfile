@@ -2,12 +2,20 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY app/requirements.txt .
+# Tizim paketlari
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Requirements
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Kod
 COPY app/ .
 
-RUN mkdir -p /app/../data
+# Data papkasi
+RUN mkdir -p /app/data /app/logs
 
 EXPOSE 8000
 

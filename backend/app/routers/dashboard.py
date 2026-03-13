@@ -54,7 +54,9 @@ async def dashboard_stats(current: dict = Depends(get_current_user)):
 async def recent_activity(current: dict = Depends(get_current_user)):
     with get_db() as conn:
         sessions = conn.execute(
-            "SELECT id, title, updated_at, msg_count FROM chat_sessions WHERE user_id=? ORDER BY updated_at DESC LIMIT 5",
+            """SELECT id, title, updated_at,
+               (SELECT COUNT(*) FROM chat_history WHERE session_id=chat_sessions.id) as msg_count
+               FROM chat_sessions WHERE user_id=? ORDER BY updated_at DESC LIMIT 5""",
             (current["user_id"],)
         ).fetchall()
     return [dict(r) for r in sessions]
