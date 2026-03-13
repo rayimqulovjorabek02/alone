@@ -111,7 +111,12 @@ def _reg(module_name: str, prefix: str, tags: list[str]):
     import importlib
     try:
         mod = importlib.import_module(f"routers.{module_name}")
-        app.include_router(mod.router)
+        # Router ichida o'z prefix bo'lsa — qo'shma, bo'lmasa main.py dan ber
+        router_prefix = getattr(mod.router, "prefix", "") or ""
+        if router_prefix:
+            app.include_router(mod.router, tags=tags)
+        else:
+            app.include_router(mod.router, prefix=prefix, tags=tags)
         print(f"  ✅ {prefix}")
     except ModuleNotFoundError:
         print(f"  ⚠️  {module_name} moduli topilmadi")

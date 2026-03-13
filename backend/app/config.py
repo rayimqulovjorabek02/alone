@@ -13,8 +13,9 @@ from dotenv import load_dotenv
 
 # .env faylni yuklash — backend/ papkasidan qidiradi
 _base = Path(__file__).resolve().parent.parent  # backend/
-load_dotenv(_base / ".env")
-load_dotenv(_base / "app" / ".env")  # fallback
+load_dotenv(_base / ".env")            # backend/.env
+load_dotenv(_base / "app" / ".env")    # backend/app/.env
+load_dotenv(_base.parent / ".env")     # alone-ai/.env (loyiha ildizi)
 
 # ── DATABASE ──────────────────────────────────────────────────
 DB_PATH = os.getenv("DB_PATH", str(_base / "data" / "alone.db"))

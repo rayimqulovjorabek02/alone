@@ -55,6 +55,36 @@ def clean_for_tts(text: str) -> str:
 # TTS — MATN → OVOZ
 # ══════════════════════════════════════════════
 
+async def text_to_speech_elevenlabs(text: str, lang: str = "uz") -> bytes | None:
+    """ElevenLabs TTS — yuqori sifatli ko'p tilli ovoz."""
+    import os, httpx
+    api_key = os.getenv("ELEVENLABS_API_KEY", "")
+    if not api_key:
+        return None
+    try:
+        voice_id = "21m00Tcm4TlvDq8ikWAM"  # Rachel
+        clean = clean_for_tts(text)[:2500]
+        if not clean:
+            return None
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.post(
+                f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+                headers={"xi-api-key": api_key, "Content-Type": "application/json"},
+                json={
+                    "text": clean,
+                    "model_id": "eleven_multilingual_v2",
+                    "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
+                },
+            )
+            if resp.status_code == 200:
+                return resp.content
+            print(f"[ElevenLabs xato]: {resp.status_code} {resp.text[:100]}")
+            return None
+    except Exception as e:
+        print(f"[ElevenLabs xato]: {e}")
+        return None
+
+
 async def text_to_speech_edge(
     text: str,
     lang:   str = "uz",
@@ -62,33 +92,20 @@ async def text_to_speech_edge(
     rate:   str = "+0%",
     pitch:  str = "+0Hz",
 ) -> bytes | None:
-    """
-    Edge TTS (Microsoft Neural) — eng natural ovoz.
-    Returns: MP3 bytes yoki None
-    """
+    """Edge TTS (Microsoft Neural) — eng natural ovoz."""
     try:
         import edge_tts
-
         voice = VOICES.get(lang, VOICES["uz"]).get(gender, VOICES["uz"]["default"])
         clean = clean_for_tts(text)[:3000]
         if not clean:
             return None
-
-        communicate = edge_tts.Communicate(
-            text   = clean,
-            voice  = voice,
-            rate   = rate,
-            pitch  = pitch,
-        )
-
+        communicate = edge_tts.Communicate(text=clean, voice=voice, rate=rate, pitch=pitch)
         buf = io.BytesIO()
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
                 buf.write(chunk["data"])
-
         data = buf.getvalue()
         return data if len(data) > 500 else None
-
     except Exception as e:
         print(f"[Edge TTS xato]: {e}")
         return None
@@ -197,7 +214,12 @@ async def tts(text: str, lang: str = "uz", gender: str = "default",
     pros = speed_map.get(speed, speed_map["normal"])
 
     # Edge TTS (asosiy)
-    data = await text_to_speech_edge(text, lang, gender, pros["rate"], pros["pitch"])
+    # ElevenLabs (birinchi — eng sifatli)
+    data = await text_to_speech_elevenlabs(text, lang)
+
+    # Edge TTS fallback
+    if not data:
+        data = await text_to_speech_edge(text, lang, gender, pros["rate"], pros["pitch"])
     if data:
         return data
 

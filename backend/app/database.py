@@ -163,7 +163,60 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_reminder_at  ON reminders(remind_at);
         """)
         conn.commit()
+
+        # Migration: usage_stats ga UNIQUE constraint qo'shish (eski DB uchun)
+        _migrate_usage_stats(conn)
+
     print("✅ Database initialized")
+
+
+def _migrate_usage_stats(conn):
+    """Eski DB da usage_stats UNIQUE constraint yo'q bo'lsa tuzatish."""
+    try:
+        # Jadval ma'lumotini olish
+        info = conn.execute("PRAGMA table_info(usage_stats)").fetchall()
+        if not info:
+            return  # Jadval yo'q, init_db yaratadi
+
+        # UNIQUE index bormi tekshirish
+        indexes = conn.execute("PRAGMA index_list(usage_stats)").fetchall()
+        has_unique = any(
+            idx["unique"] == 1
+            for idx in indexes
+            if idx["name"] != "sqlite_autoindex_usage_stats_1"
+        )
+
+        # SQLite da mavjud jadvalga UNIQUE qo'shib bo'lmaydi
+        # Shuning uchun jadalni qayta yaratish kerak
+        if not has_unique:
+            conn.executescript("""
+                -- Vaqtinchalik jadvalga ko'chirish
+                CREATE TABLE IF NOT EXISTS usage_stats_backup AS
+                SELECT * FROM usage_stats;
+
+                DROP TABLE usage_stats;
+
+                CREATE TABLE usage_stats (
+                    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    type    TEXT    NOT NULL,
+                    count   INTEGER DEFAULT 0,
+                    date    TEXT    DEFAULT (date('now')),
+                    UNIQUE(user_id, type, date)
+                );
+
+                -- Ma'lumotlarni qayta yuklash (takrorlanmaydiganlari)
+                INSERT OR IGNORE INTO usage_stats (user_id, type, count, date)
+                SELECT user_id, type, SUM(count), date
+                FROM usage_stats_backup
+                GROUP BY user_id, type, date;
+
+                DROP TABLE usage_stats_backup;
+            """)
+            conn.commit()
+            print("✅ usage_stats migration bajarildi")
+    except Exception as e:
+        print(f"⚠️  usage_stats migration xato: {e}")
 
 
 # ── CRUD funksiyalari ─────────────────────────────────────────
@@ -270,10 +323,21 @@ def get_usage(user_id: int, type: str) -> int:
 
 def increment_usage(user_id: int, type: str):
     with get_db() as db:
-        db.execute("""
-            INSERT INTO usage_stats (user_id,type,count,date) VALUES (?,?,1,date('now'))
-            ON CONFLICT(user_id,type,date) DO UPDATE SET count=count+1
-        """, (user_id, type))
+        # Avval mavjudligini tekshir
+        row = db.execute(
+            "SELECT id FROM usage_stats WHERE user_id=? AND type=? AND date=date('now')",
+            (user_id, type)
+        ).fetchone()
+        if row:
+            db.execute(
+                "UPDATE usage_stats SET count=count+1 WHERE user_id=? AND type=? AND date=date('now')",
+                (user_id, type)
+            )
+        else:
+            db.execute(
+                "INSERT INTO usage_stats (user_id,type,count,date) VALUES (?,?,1,date('now'))",
+                (user_id, type)
+            )
         db.commit()
 
 def get_settings(user_id: int) -> dict:

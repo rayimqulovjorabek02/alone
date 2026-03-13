@@ -192,17 +192,31 @@ async def _groq_call(
     all_msgs = [{"role": "system", "content": system}] + messages
 
     if stream:
-        resp = await client.chat.completions.create(
-            model=model_cfg["model"],
-            messages=all_msgs,
-            stream=True,
-            max_tokens=2048,
-            temperature=0.7,
-        )
-        async for chunk in resp:
-            token = chunk.choices[0].delta.content
-            if token:
-                yield token
+        try:
+            # Yangi Groq library (>= 0.9)
+            async with client.chat.completions.stream(
+                model=model_cfg["model"],
+                messages=all_msgs,
+                max_tokens=2048,
+                temperature=0.7,
+            ) as s:
+                async for chunk in s:
+                    token = chunk.choices[0].delta.content
+                    if token:
+                        yield token
+        except AttributeError:
+            # Eski Groq library
+            resp = await client.chat.completions.create(
+                model=model_cfg["model"],
+                messages=all_msgs,
+                stream=True,
+                max_tokens=2048,
+                temperature=0.7,
+            )
+            async for chunk in resp:
+                token = chunk.choices[0].delta.content
+                if token:
+                    yield token
     else:
         resp = await client.chat.completions.create(
             model=model_cfg["model"],
@@ -451,9 +465,16 @@ async def routed_chat(
             print(f"[Router] Ishlatilmoqda: {model_cfg['label']}")
             count = 0
 
-            async for token in caller(model_cfg, messages, system, stream):
-                yield token
-                count += 1
+            gen = caller(model_cfg, messages, system, stream)
+            try:
+                async for token in gen:
+                    yield token
+                    count += 1
+            except Exception as inner_e:
+                last_error = str(inner_e)
+                print(f"[Router] '{model_cfg['name']}' stream xato: {inner_e}")
+                _State.fail(model_cfg["name"])
+                continue
 
             if count > 0:
                 _State.ok(model_cfg["name"])
