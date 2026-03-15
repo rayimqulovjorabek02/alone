@@ -2,35 +2,83 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap');
+
+/* ── CSS O'zgaruvchilar ──────────────────────────────────────── */
 :root {
-  --bg:       #0f0f13;
-  --surface:  #18181f;
-  --surface2: #22222c;
-  --border:   rgba(255,255,255,0.08);
-  --text:     #f0f0f5;
-  --text2:    #a0a0b0;
-  --text3:    #606070;
-  --accent:   #7c3aed;
-  --accent2:  #6d28d9;
-  --success:  #22c55e;
-  --error:    #f87171;
-  --warning:  #f59e0b;
+  /* Ranglar */
+  --bg:        #09090d;
+  --surface:   #111118;
+  --surface2:  #1a1a24;
+  --surface3:  #22222e;
+  --border:    rgba(255, 255, 255, 0.07);
+  --border2:   rgba(255, 255, 255, 0.12);
+
+  /* Matn */
+  --text:      #ededf0;
+  --text2:     #9898aa;
+  --text3:     #55556a;
+
+  /* Accent — to'q binafsha */
+  --accent:    #7c3aed;
+  --accent2:   #6d28d9;
+  --accent3:   #5b21b6;
+  --accent-glow: rgba(124, 58, 237, 0.25);
+  --accent-soft: rgba(124, 58, 237, 0.12);
+
+  /* Status */
+  --success:   #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.12);
+  --error:     #f87171;
+  --error-soft: rgba(248, 113, 113, 0.12);
+  --warning:   #f59e0b;
+  --warning-soft: rgba(245, 158, 11, 0.12);
+  --info:      #38bdf8;
+  --info-soft: rgba(56, 189, 248, 0.12);
+
+  /* Radiuslar */
+  --r-sm:  6px;
+  --r-md:  10px;
+  --r-lg:  14px;
+  --r-xl:  20px;
+  --r-2xl: 28px;
+
+  /* Soyalar */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
+  --shadow-accent: 0 0 24px rgba(124, 58, 237, 0.3);
+
+  /* Animatsiya */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Shrift */
+  --font: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Geist Mono', 'Fira Code', monospace;
 }
 
-*,
-*::before,
-*::after {
+/* ── Reset ───────────────────────────────────────────────────── */
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font);
+  font-size: 14px;
   line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 #root {
@@ -38,11 +86,168 @@ body {
   overflow: hidden;
 }
 
+/* ── Scrollbar ───────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); }
 
+/* ── Asosiy elementlar ───────────────────────────────────────── */
 a { color: inherit; text-decoration: none; }
-button { cursor: pointer; font-family: inherit; }
-input, textarea, select { font-family: inherit; }
+button { cursor: pointer; font-family: var(--font); }
+input, textarea, select {
+  font-family: var(--font);
+  color: var(--text);
+}
+
+/* ── Input fokus effekti ─────────────────────────────────────── */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ── Tugma hover effekti ─────────────────────────────────────── */
+button:active { transform: scale(0.97); }
+
+/* ── Kartochka ───────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 20px;
+}
+
+/* ── Badge ───────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.badge-accent  { background: var(--accent-soft);   color: #a78bfa; }
+.badge-success { background: var(--success-soft);  color: #4ade80; }
+.badge-error   { background: var(--error-soft);    color: #fca5a5; }
+.badge-warning { background: var(--warning-soft);  color: #fcd34d; }
+
+/* ── Animatsiyalar ───────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+
+.fade-in   { animation: fadeIn  0.25s var(--ease) both; }
+.slide-in  { animation: slideIn 0.2s  var(--ease) both; }
+.animate-pulse { animation: pulse 2s ease-in-out infinite; }
+.animate-spin  { animation: spin  0.8s linear infinite; }
+
+/* ── Skeleton loading ────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface2) 25%,
+    var(--surface3) 50%,
+    var(--surface2) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--r-md);
+}
+
+/* ── Gradient matn ───────────────────────────────────────────── */
+.text-gradient {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed, #6d28d9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Shaffof fon (glass effect) ──────────────────────────────── */
+.glass {
+  background: rgba(17, 17, 24, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+}
+
+/* ── Kod bloki ───────────────────────────────────────────────── */
+code, pre {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* ── Markdown ────────────────────────────────────────────────── */
+.prose h1, .prose h2, .prose h3 {
+  font-weight: 700;
+  margin: 12px 0 6px;
+  line-height: 1.3;
+}
+.prose h1 { font-size: 20px; }
+.prose h2 { font-size: 17px; }
+.prose h3 { font-size: 15px; }
+.prose p  { margin: 0 0 8px; }
+.prose ul, .prose ol { padding-left: 20px; margin: 4px 0; }
+.prose li { margin: 2px 0; }
+.prose a  { color: #a78bfa; text-decoration: underline; text-underline-offset: 2px; }
+.prose strong { font-weight: 600; color: var(--text); }
+.prose blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+  color: var(--text2);
+  margin: 8px 0;
+}
+.prose table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+.prose th { background: var(--surface3); padding: 8px 12px; text-align: left; font-weight: 600; }
+.prose td { padding: 7px 12px; border-top: 1px solid var(--border); }
+
+/* ── Tooltip ─────────────────────────────────────────────────── */
+[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* ── Divider ─────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
