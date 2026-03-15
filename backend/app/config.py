@@ -8,6 +8,7 @@ Qoida:
   3. Boshqa fayllar bu yerdan import qiladi
 """
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -19,8 +20,13 @@ load_dotenv(_base / "app" / ".env")  # fallback
 # ── DATABASE ──────────────────────────────────────────────────
 DB_PATH = os.getenv("DB_PATH", str(_base / "data" / "alone.db"))
 
+# Windows absolut yo'lini avtomatik to'g'irlash
+if "Users" in DB_PATH and "\\" in DB_PATH:
+    print("⚠️  DB_PATH Windows absolut yo'li! Nisbiy yo'lga o'tkazilmoqda...")
+    DB_PATH = str(_base / "data" / "alone.db")
+
 # ── JWT ───────────────────────────────────────────────────────
-JWT_SECRET                   = os.getenv("JWT_SECRET", "alone-ai-secret-CHANGE-THIS")
+JWT_SECRET                   = os.getenv("JWT_SECRET", "")
 JWT_ALGORITHM                = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES  = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES",  str(60 * 24)))
 REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 30)))
@@ -52,6 +58,14 @@ EMAIL_USER = os.getenv("EMAIL_USER", "")
 EMAIL_PASS = os.getenv("EMAIL_PASS", "")
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+
+# ── GOOGLE OAUTH ──────────────────────────────────────────────
+GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID",     "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+
+# ── ADMIN ─────────────────────────────────────────────────────
+ADMIN_EMAIL    = os.getenv("ADMIN_EMAIL",    "")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 
 # ── ILOVA ─────────────────────────────────────────────────────
 APP_NAME = os.getenv("APP_NAME", "Alone AI")
@@ -107,15 +121,58 @@ GROQ_MODELS = {
 }
 
 # ── Konfiguratsiyani tekshirish ───────────────────────────────
-def check_config():
+_WEAK_SECRETS = {
+    "alone-ai-secret-CHANGE-THIS",
+    "your-super-secret-key-change-this",
+    "secret",
+    "password",
+    "",
+}
+
+def check_config() -> bool:
     """Startup da muhim kalitlarni tekshirish."""
     warnings = []
+    errors   = []
+
+    # JWT tekshiruv
+    if not JWT_SECRET or JWT_SECRET in _WEAK_SECRETS:
+        errors.append("❌ JWT_SECRET bo'sh yoki zaif! `openssl rand -hex 32` bilan yangi kalit oling.")
+
+    if len(JWT_SECRET) < 32:
+        warnings.append("⚠️  JWT_SECRET kamida 32 belgi bo'lishi kerak.")
+
+    # AI kalitlar
     if not GROQ_API_KEY and not GEMINI_API_KEY and not OPENAI_API_KEY:
-        warnings.append("⚠️  Hech qanday AI API key topilmadi!")
-    if JWT_SECRET == "alone-ai-secret-CHANGE-THIS":
-        warnings.append("⚠️  JWT_SECRET o'zgartiring!")
+        errors.append("❌ Hech qanday AI API key topilmadi! GROQ_API_KEY yoki boshqasini kiriting.")
+
+    # Admin
+    if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+        warnings.append("⚠️  ADMIN_EMAIL yoki ADMIN_PASSWORD bo'sh.")
+
+    # Email
+    if EMAIL_USER and not EMAIL_PASS:
+        warnings.append("⚠️  EMAIL_USER bor, lekin EMAIL_PASS yo'q.")
+
+    # Debug
     if DEBUG:
         warnings.append("⚠️  DEBUG=true — production da o'chiring!")
+
+    # DB yo'l
+    db_dir = Path(DB_PATH).parent
+    if not db_dir.exists():
+        try:
+            db_dir.mkdir(parents=True, exist_ok=True)
+            print(f"📁 DB papka yaratildi: {db_dir}")
+        except Exception as e:
+            errors.append(f"❌ DB papka yaratib bo'lmadi: {db_dir} — {e}")
+
     for w in warnings:
         print(w)
-    return len(warnings) == 0
+
+    if errors:
+        for e in errors:
+            print(e)
+        print("\n💡 .env.example faylini .env ga nusxalab to'ldiring.")
+        return False
+
+    return True

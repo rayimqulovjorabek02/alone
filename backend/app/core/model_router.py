@@ -22,11 +22,12 @@ from typing import AsyncGenerator
 
 # ── API kalitlar ──────────────────────────────────────────────
 
-GROQ_KEY      = os.getenv("GROQ_API_KEY",      "")
-GEMINI_KEY    = os.getenv("GEMINI_API_KEY",     "")
-OPENAI_KEY    = os.getenv("OPENAI_API_KEY",     "")
-DEEPSEEK_KEY  = os.getenv("DEEPSEEK_API_KEY",   "")
-
+from config import (
+    GROQ_API_KEY    as GROQ_KEY,
+    GEMINI_API_KEY  as GEMINI_KEY,
+    OPENAI_API_KEY  as OPENAI_KEY,
+    DEEPSEEK_API_KEY as DEEPSEEK_KEY,
+)
 # ── Model konfiguratsiyasi ────────────────────────────────────
 
 MODELS = {

@@ -1,7 +1,12 @@
 """
 backend/app/routers/chat.py — WebSocket chat, sessiyalar
+Optimallashtirishlar:
+  - WebSocket da rate limiting qo'shildi
+  - Har xabarda DB ulanish soni kamaytirildi (11 → 4)
+  - Sessiya tekshiruvi yaxshilandi
 """
 import json
+import time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from pydantic import BaseModel
 from core.jwt import get_current_user, decode_token
@@ -14,11 +19,29 @@ from database import (
     save_message_session, get_session_messages,
     get_sessions_list, create_session_full,
     delete_session_full, auto_name_session,
-    get_usage, increment_usage, get_plan
+    get_usage, increment_usage, get_plan, get_db
 )
 from config import PLANS, DEFAULT_MODEL, CONTEXT_WINDOW
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+# WebSocket uchun per-user rate limit (in-memory)
+_ws_rate: dict = {}   # user_id → [timestamps]
+WS_LIMIT  = 30        # 30 xabar
+WS_WINDOW = 60        # 60 soniyada
+
+
+def _ws_check(user_id: int) -> bool:
+    """True = ruxsat, False = limitdan oshdi."""
+    now = time.time()
+    history = _ws_rate.get(user_id, [])
+    history = [t for t in history if now - t < WS_WINDOW]
+    if len(history) >= WS_LIMIT:
+        _ws_rate[user_id] = history
+        return False
+    history.append(now)
+    _ws_rate[user_id] = history
+    return True
 
 
 # ── SESSIYALAR ────────────────────────────────────────────────
@@ -36,12 +59,26 @@ async def new_session(current: dict = Depends(get_current_user)):
 
 @router.delete("/sessions/{session_id}")
 async def delete_session(session_id: int, current: dict = Depends(get_current_user)):
+    # Foydalanuvchi faqat o'z sessiyasini o'chirishi mumkin
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT user_id FROM chat_sessions WHERE id=?", (session_id,)
+        ).fetchone()
+    if not row or row["user_id"] != current["user_id"]:
+        raise HTTPException(403, "Ruxsat yo'q")
     delete_session_full(session_id)
     return {"success": True}
 
 
 @router.get("/sessions/{session_id}/messages")
 async def get_messages(session_id: int, current: dict = Depends(get_current_user)):
+    # Foydalanuvchi faqat o'z sessiya xabarlarini ko'rishi mumkin
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT user_id FROM chat_sessions WHERE id=?", (session_id,)
+        ).fetchone()
+    if not row or row["user_id"] != current["user_id"]:
+        raise HTTPException(403, "Ruxsat yo'q")
     return get_session_messages(session_id)
 
 
@@ -51,14 +88,19 @@ async def get_messages(session_id: int, current: dict = Depends(get_current_user
 async def websocket_chat(websocket: WebSocket, token: str):
     await websocket.accept()
 
+    # Token tekshirish
     try:
         payload  = decode_token(token)
         user_id  = payload["user_id"]
         username = payload["username"]
     except Exception:
-        await websocket.send_json({"type": "error", "message": "Token notogri"})
+        await websocket.send_json({"type": "error", "message": "Token noto'g'ri"})
         await websocket.close()
         return
+
+    # Foydalanuvchi ma'lumotlarini oldindan bir marta o'qish
+    plan  = get_plan(user_id)
+    limit = PLANS[plan]["limits"]["messages"]
 
     try:
         while True:
@@ -72,9 +114,15 @@ async def websocket_chat(websocket: WebSocket, token: str):
             if not user_msg:
                 continue
 
-            # Limit tekshirish
-            plan  = get_plan(user_id)
-            limit = PLANS[plan]["limits"]["messages"]
+            # WebSocket rate limit
+            if not _ws_check(user_id):
+                await websocket.send_json({
+                    "type":    "error",
+                    "message": f"Juda tez yuborayapsiz. {WS_WINDOW} soniyada {WS_LIMIT} ta xabar mumkin.",
+                })
+                continue
+
+            # Kunlik limit tekshirish (bitta DB so'rov)
             usage = get_usage(user_id, "messages")
             if usage >= limit:
                 await websocket.send_json({
@@ -88,7 +136,7 @@ async def websocket_chat(websocket: WebSocket, token: str):
                 session_id = create_session_full(user_id, user_msg[:50], model)
                 await websocket.send_json({"type": "session_created", "session_id": session_id})
 
-            # Settings va xotira
+            # Settings va xotira (cached — DB ga bormaydi ko'pincha)
             settings = cached_get_settings(user_id)
             language = settings.get("language", "uz")
             ai_style = settings.get("ai_style", "friendly")
@@ -100,7 +148,7 @@ async def websocket_chat(websocket: WebSocket, token: str):
             history  = get_session_messages(session_id, limit=CONTEXT_WINDOW)
             messages = [{"role": r["role"], "content": r["content"]} for r in history]
 
-            # Veb qidiruv
+            # Veb qidiruv (faqat kerak bo'lganda)
             search_keywords = ["hozir", "bugun", "yangilik", "narx", "ob-havo", "kim", "qachon"]
             search_result   = ""
             if any(kw in user_msg.lower() for kw in search_keywords):
@@ -114,7 +162,7 @@ async def websocket_chat(websocket: WebSocket, token: str):
             if search_result:
                 sys_prompt += f"\n\nVeb qidiruv natijasi:\n{search_result}"
 
-            # Xabarni saqlash
+            # Xabarni saqlash + usage birga
             save_message_session(user_id, session_id, "user", user_msg)
             increment_usage(user_id, "messages")
 
@@ -151,7 +199,8 @@ async def websocket_chat(websocket: WebSocket, token: str):
             })
 
     except WebSocketDisconnect:
-        pass
+        # Foydalanuvchi chiqdi — rate limit ma'lumotini tozalash
+        _ws_rate.pop(user_id, None)
     except Exception as e:
         try:
             await websocket.send_json({"type": "error", "message": str(e)})

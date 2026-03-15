@@ -21,9 +21,24 @@ def _groq_key():       return os.getenv("GROQ_API_KEY", "")
 
 # ── TIL XARITASI ─────────────────────────────────────────────
 VOICES = {
-    "uz": {"default": "uz-UZ-MadinaNeural", "male": "uz-UZ-SardorNeural"},
-    "ru": {"default": "ru-RU-SvetlanaNeural", "male": "ru-RU-DmitryNeural"},
-    "en": {"default": "en-US-JennyNeural", "male": "en-US-GuyNeural"},
+    "uz": {"default": "uz-UZ-MadinaNeural",     "male": "uz-UZ-SardorNeural"},
+    "ru": {"default": "ru-RU-SvetlanaNeural",    "male": "ru-RU-DmitryNeural"},
+    "en": {"default": "en-US-JennyNeural",       "male": "en-US-GuyNeural"},
+    "tr": {"default": "tr-TR-EmelNeural",        "male": "tr-TR-AhmetNeural"},
+    "ar": {"default": "ar-SA-ZariyahNeural",     "male": "ar-SA-HamedNeural"},
+    "de": {"default": "de-DE-KatjaNeural",       "male": "de-DE-ConradNeural"},
+    "fr": {"default": "fr-FR-DeniseNeural",      "male": "fr-FR-HenriNeural"},
+    "es": {"default": "es-ES-ElviraNeural",      "male": "es-ES-AlvaroNeural"},
+    "it": {"default": "it-IT-ElsaNeural",        "male": "it-IT-DiegoNeural"},
+    "zh": {"default": "zh-CN-XiaoxiaoNeural",    "male": "zh-CN-YunxiNeural"},
+    "ja": {"default": "ja-JP-NanamiNeural",      "male": "ja-JP-KeitaNeural"},
+    "ko": {"default": "ko-KR-SunHiNeural",       "male": "ko-KR-InJoonNeural"},
+    "hi": {"default": "hi-IN-SwaraNeural",       "male": "hi-IN-MadhurNeural"},
+    "fa": {"default": "fa-IR-DilaraNeural",      "male": "fa-IR-FaridNeural"},
+    "kk": {"default": "kk-KZ-AigulNeural",       "male": "kk-KZ-DauletNeural"},
+    "az": {"default": "az-AZ-BanuNeural",        "male": "az-AZ-BabekNeural"},
+    "uk": {"default": "uk-UA-PolinaNeural",      "male": "uk-UA-OstapNeural"},
+    "pl": {"default": "pl-PL-AgnieszkaNeural",   "male": "pl-PL-MarekNeural"},
 }
 
 STT_LANG_MAP = {"uz": "uz-UZ", "ru": "ru-RU", "en": "en-US"}
@@ -252,10 +267,12 @@ async def _edge_tts(
             "fast":   {"rate": "+20%", "pitch": "+0Hz"},
         }
         pros  = speed_map.get(speed, speed_map["normal"])
-        voice = VOICES.get(lang, VOICES["uz"]).get(gender, VOICES["uz"]["default"])
+        lang_voices = VOICES.get(lang, VOICES["uz"])
+        voice = lang_voices.get(gender, lang_voices.get("default", VOICES["uz"]["default"]))
         communicate = edge_tts.Communicate(
             text=text, voice=voice,
             rate=pros["rate"], pitch=pros["pitch"],
+            volume="+0%",
         )
         buf = io.BytesIO()
         async for chunk in communicate.stream():
