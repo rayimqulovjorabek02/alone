@@ -6,44 +6,40 @@ import tempfile
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from core.jwt import get_current_user
 
-router   = APIRouter(prefix="/api/files", tags=["files"])
-GROQ_KEY = os.getenv("GROQ_API_KEY", "")
+router = APIRouter(tags=["files"])
+
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".pptx", ".ppt", ".txt", ".md", ".csv", ".json", ".py", ".js", ".ts", ".html", ".xml"}
+
+
+def _groq_key(): return os.getenv("GROQ_API_KEY", "")
 
 
 def _read_file(path: str, ext: str) -> str:
-    if ext == ".pdf":
-        try:
-            from pypdf import PdfReader
-            reader = PdfReader(path)
-            return "\n".join(p.extract_text() or "" for p in reader.pages)
-        except Exception:
-            return ""
-    elif ext == ".docx":
-        try:
-            from docx import Document
-            doc = Document(path)
-            return "\n".join(p.text for p in doc.paragraphs)
-        except Exception:
-            return ""
-    else:
-        try:
-            with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                return f.read()
-        except Exception:
-            return ""
+    from core.file_reader import read_file
+    return read_file(path)
 
 
 @router.post("/analyze")
 async def analyze_file(
     file:     UploadFile = File(...),
     question: str = "Bu faylni tahlil qil",
-    current:  dict = Depends(get_current_user)
+    current:  dict = Depends(get_current_user),
 ):
-    ext = os.path.splitext(file.filename or "")[-1].lower() or ".txt"
-    content = await file.read()
+    if not file.filename:
+        raise HTTPException(400, "Fayl nomi kerak")
 
+    ext = os.path.splitext(file.filename)[-1].lower()
+    if not ext:
+        ext = ".txt"
+
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(400, f"Qo'llab-quvvatlanmaydigan format: {ext}. Ruxsat etilganlar: {', '.join(ALLOWED_EXTENSIONS)}")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(400, "Fayl bo'sh")
     if len(content) > 10 * 1024 * 1024:
-        raise HTTPException(400, "Fayl 10MB dan kichik bolsin")
+        raise HTTPException(400, "Fayl 10MB dan kichik bo'lsin")
 
     with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
         tmp.write(content)
@@ -51,16 +47,22 @@ async def analyze_file(
 
     try:
         text = _read_file(tmp_path, ext)
-        if not text.strip():
-            raise HTTPException(400, "Fayl bosh yoki oqub bolmadi")
+        print(f"[FileAnalysis] {file.filename} | ext={ext} | text={len(text)} belgi | preview={repr(text[:80])}")
+
+        if not text or not text.strip() or text.startswith("["):
+            raise HTTPException(400, f"Fayl o'qib bo'lmadi: {text[:100]}")
+
+        groq_key = _groq_key()
+        if not groq_key:
+            raise HTTPException(500, "GROQ_API_KEY sozlanmagan")
 
         from groq import Groq
-        client   = Groq(api_key=GROQ_KEY)
+        client   = Groq(api_key=groq_key)
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "Faylni tahlil qil. Uzbek tilida javob ber."},
-                {"role": "user",   "content": f"Fayl:\n{text[:12000]}\n\nSavol: {question}"}
+                {"role": "system", "content": "Faylni tahlil qil. O'zbek tilida javob ber. Aniq va batafsil bo'l."},
+                {"role": "user",   "content": f"Fayl matni:\n{text[:12000]}\n\nSavol: {question}"}
             ],
             max_tokens=2048,
         )
@@ -70,4 +72,7 @@ async def analyze_file(
             "analysis": response.choices[0].message.content,
         }
     finally:
-        os.unlink(tmp_path)
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass

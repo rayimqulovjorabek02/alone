@@ -167,7 +167,58 @@ def init_db():
         # Migration: usage_stats ga UNIQUE constraint qo'shish (eski DB uchun)
         _migrate_usage_stats(conn)
 
+    # Migration: image_history va boshqa jadvallarni yangilash
+    _migrate_tables(conn)
+
     print("✅ Database initialized")
+
+
+def _migrate_tables(conn):
+    """Eski DB da etishmayotgan ustunlarni qo'shish."""
+    migrations = [
+        # image_history
+        ("image_history", "url",      "ALTER TABLE image_history ADD COLUMN url TEXT"),
+        ("image_history", "model",    "ALTER TABLE image_history ADD COLUMN model TEXT DEFAULT 'stability'"),
+        # chat_sessions
+        ("chat_sessions", "model",    "ALTER TABLE chat_sessions ADD COLUMN model TEXT DEFAULT ''"),
+        # users
+        ("users", "is_verified",      "ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0"),
+        ("users", "verify_code",      "ALTER TABLE users ADD COLUMN verify_code TEXT"),
+        ("users", "reset_code",       "ALTER TABLE users ADD COLUMN reset_code TEXT"),
+        ("users", "last_login",       "ALTER TABLE users ADD COLUMN last_login REAL"),
+        # todos
+        ("todos", "task",             "ALTER TABLE todos ADD COLUMN task TEXT"),
+        ("todos", "title",            "ALTER TABLE todos ADD COLUMN title TEXT"),
+        ("todos", "priority",         "ALTER TABLE todos ADD COLUMN priority TEXT DEFAULT 'normal'"),
+        ("todos", "due_date",         "ALTER TABLE todos ADD COLUMN due_date TEXT"),
+        # reminders
+        ("reminders", "body",         "ALTER TABLE reminders ADD COLUMN body TEXT"),
+        ("reminders", "is_sent",      "ALTER TABLE reminders ADD COLUMN is_sent INTEGER DEFAULT 0"),
+        # notifications
+        ("notifications", "type",     "ALTER TABLE notifications ADD COLUMN type TEXT DEFAULT 'info'"),
+        ("notifications", "is_read",  "ALTER TABLE notifications ADD COLUMN is_read INTEGER DEFAULT 0"),
+        # user_settings
+        ("user_settings", "name",        "ALTER TABLE user_settings ADD COLUMN name TEXT DEFAULT ''"),
+        ("user_settings", "temperature", "ALTER TABLE user_settings ADD COLUMN temperature REAL DEFAULT 0.7"),
+        ("user_settings", "tts_voice",   "ALTER TABLE user_settings ADD COLUMN tts_voice TEXT DEFAULT 'default'"),
+        # feedback
+        ("feedback", "status",      "ALTER TABLE feedback ADD COLUMN status TEXT DEFAULT 'new'"),
+        ("feedback", "admin_reply", "ALTER TABLE feedback ADD COLUMN admin_reply TEXT"),
+        # subscriptions
+        ("subscriptions", "status",           "ALTER TABLE subscriptions ADD COLUMN status TEXT DEFAULT 'active'"),
+        ("subscriptions", "stripe_customer_id","ALTER TABLE subscriptions ADD COLUMN stripe_customer_id TEXT"),
+        ("subscriptions", "stripe_sub_id",    "ALTER TABLE subscriptions ADD COLUMN stripe_sub_id TEXT"),
+        ("subscriptions", "expires_at",       "ALTER TABLE subscriptions ADD COLUMN expires_at REAL"),
+    ]
+    for table, column, sql in migrations:
+        try:
+            cols = [row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+            if column not in cols:
+                conn.execute(sql)
+                conn.commit()
+                print(f"✅ Migration: {table}.{column} qo\'shildi")
+        except Exception as e:
+            pass
 
 
 def _migrate_usage_stats(conn):

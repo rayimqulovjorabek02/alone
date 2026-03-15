@@ -12,7 +12,8 @@ router = APIRouter(prefix="/api/reminder", tags=["reminder"])
 
 class ReminderCreate(BaseModel):
     title:     str
-    message:   Optional[str] = None
+    message:   Optional[str] = None  # body ustuniga saqlanadi
+    body:      Optional[str] = None
     remind_at: str  # ISO format: 2024-12-01T10:00
 
 
@@ -31,10 +32,20 @@ async def create_reminder(body: ReminderCreate, current: dict = Depends(get_curr
     if not body.title.strip():
         raise HTTPException(400, "Sarlavha kerak")
     with get_db() as conn:
+        # remind_at ni unix timestamp ga aylantirish
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(body.remind_at.replace("Z", "+00:00"))
+            remind_ts = dt.timestamp()
+        except Exception:
+            remind_ts = body.remind_at  # fallback
+
+        note = body.body or body.message or ""
         cur = conn.execute(
-            "INSERT INTO reminders (user_id, title, message, remind_at) VALUES (?,?,?,?)",
-            (current["user_id"], body.title, body.message, body.remind_at)
+            "INSERT INTO reminders (user_id, title, body, remind_at) VALUES (?,?,?,?)",
+            (current["user_id"], body.title, note, remind_ts)
         )
+        conn.commit()
     return {"id": cur.lastrowid, "success": True}
 
 
@@ -43,4 +54,5 @@ async def delete_reminder(reminder_id: int, current: dict = Depends(get_current_
     with get_db() as conn:
         conn.execute("DELETE FROM reminders WHERE id=? AND user_id=?",
                      (reminder_id, current["user_id"]))
+        conn.commit()
     return {"success": True}

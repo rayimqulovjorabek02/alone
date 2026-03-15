@@ -13,9 +13,8 @@ from dotenv import load_dotenv
 
 # .env faylni yuklash — backend/ papkasidan qidiradi
 _base = Path(__file__).resolve().parent.parent  # backend/
-load_dotenv(_base / ".env")            # backend/.env
-load_dotenv(_base / "app" / ".env")    # backend/app/.env
-load_dotenv(_base.parent / ".env")     # alone-ai/.env (loyiha ildizi)
+load_dotenv(_base / ".env")
+load_dotenv(_base / "app" / ".env")  # fallback
 
 # ── DATABASE ──────────────────────────────────────────────────
 DB_PATH = os.getenv("DB_PATH", str(_base / "data" / "alone.db"))
@@ -82,7 +81,7 @@ PLANS = {
         "name":      "Pro",
         "price_uzs": 49000,
         "price_usd": 9.99,
-        "limits":    {"messages": 500, "images": 20, "voice": 100, "files": 20},
+        "limits":    {"messages": 500, "images": 50, "voice": 100, "files": 20},
         "features":  ["chat", "image", "voice", "agent", "files", "export"],
     },
     "premium": {

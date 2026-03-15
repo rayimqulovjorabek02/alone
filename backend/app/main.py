@@ -35,9 +35,71 @@ async def lifespan(app: FastAPI):
         print(f"⚠️  Xavfsizlik jadval xato: {e}")
 
     print("🚀 Alone AI Backend ishga tushdi")
+
+    # Reminder background task
+    import asyncio
+    reminder_task = asyncio.create_task(_reminder_checker())
+
     yield
+
+    reminder_task.cancel()
     print("🛑 Alone AI Backend to'xtatildi")
 
+
+
+
+# ── Reminder checker ──────────────────────────────────────────
+async def _reminder_checker():
+    """Har minutda vaqti kelgan reminderlarni tekshiradi."""
+    import asyncio
+    while True:
+        try:
+            _check_reminders()  # darhol tekshir
+            await asyncio.sleep(60)  # keyin har 60 sekund
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"[Reminder] Xato: {e}")
+            await asyncio.sleep(60)
+
+
+def _check_reminders():
+    """Vaqti kelgan reminderlarni topib notification yuboradi."""
+    import time
+    from database import get_db
+    now = time.time()
+    try:
+        with get_db() as conn:
+            rows = conn.execute(
+                "SELECT r.*, u.username FROM reminders r "
+                "JOIN users u ON r.user_id = u.id "
+                "WHERE r.remind_at <= ? AND r.is_sent = 0",
+                (now,)
+            ).fetchall()
+
+            for row in rows:
+                try:
+                    # Notification yaratish
+                    conn.execute(
+                        "INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)",
+                        (
+                            row["user_id"],
+                            f"⏰ Eslatma: {row['title']}",
+                            row["body"] or row["title"],
+                            "reminder"
+                        )
+                    )
+                    # is_sent = 1 qilish
+                    conn.execute(
+                        "UPDATE reminders SET is_sent=1 WHERE id=?",
+                        (row["id"],)
+                    )
+                    print(f"[Reminder] Yuborildi: {row['username']} → {row['title']}")
+                except Exception as e:
+                    print(f"[Reminder] Notification xato: {e}")
+            conn.commit()
+    except Exception as e:
+        print(f"[Reminder] DB xato: {e}")
 
 # ── FastAPI ilovasi ───────────────────────────────────────────
 app = FastAPI(
@@ -111,12 +173,7 @@ def _reg(module_name: str, prefix: str, tags: list[str]):
     import importlib
     try:
         mod = importlib.import_module(f"routers.{module_name}")
-        # Router ichida o'z prefix bo'lsa — qo'shma, bo'lmasa main.py dan ber
-        router_prefix = getattr(mod.router, "prefix", "") or ""
-        if router_prefix:
-            app.include_router(mod.router, tags=tags)
-        else:
-            app.include_router(mod.router, prefix=prefix, tags=tags)
+        app.include_router(mod.router)
         print(f"  ✅ {prefix}")
     except ModuleNotFoundError:
         print(f"  ⚠️  {module_name} moduli topilmadi")

@@ -30,7 +30,13 @@ async def get_todos(current: dict = Depends(get_current_user)):
             "SELECT * FROM todos WHERE user_id=? ORDER BY created_at DESC",
             (current["user_id"],)
         ).fetchall()
-    return [dict(r) for r in rows]
+    result = []
+    for r in rows:
+        item = dict(r)
+        if "title" not in item or not item.get("title"):
+            item["title"] = item.get("text", "")
+        result.append(item)
+    return result
 
 
 @router.post("")
@@ -39,10 +45,11 @@ async def create_todo(body: TodoCreate, current: dict = Depends(get_current_user
         raise HTTPException(400, "Sarlavha kerak")
     with get_db() as conn:
         cur = conn.execute(
-            "INSERT INTO todos (user_id, title, priority, due_date) VALUES (?,?,?,?)",
-            (current["user_id"], body.title.strip(), body.priority, body.due_date)
+            "INSERT INTO todos (user_id, task, title, priority, due_date) VALUES (?,?,?,?,?)",
+            (current["user_id"], body.title.strip(), body.title.strip(), body.priority, body.due_date)
         )
-    return {"id": cur.lastrowid, "success": True}
+        conn.commit()
+    return {"id": cur.lastrowid, "title": body.title, "success": True}
 
 
 @router.put("/{todo_id}")
@@ -52,12 +59,16 @@ async def update_todo(todo_id: int, body: TodoUpdate, current: dict = Depends(ge
         raise HTTPException(400, "O'zgartirish kerak")
     if "done" in updates:
         updates["done"] = 1 if updates["done"] else 0
+    # title -> text ham yangilash
+    if "title" in updates:
+        updates["text"] = updates["title"]
     with get_db() as conn:
         sets = ", ".join(f"{k}=?" for k in updates)
         conn.execute(
             f"UPDATE todos SET {sets} WHERE id=? AND user_id=?",
             (*updates.values(), todo_id, current["user_id"])
         )
+        conn.commit()
     return {"success": True}
 
 

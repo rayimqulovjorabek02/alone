@@ -21,20 +21,33 @@ class AdminReply(BaseModel):
     status: str = "answered"
 
 
+# ── FOYDALANUVCHI ─────────────────────────────────────────────
+
 @router.post("")
 async def create_feedback(body: FeedbackCreate, current: dict = Depends(get_current_user)):
-    if body.type not in ("taklif", "shikoyat"):
-        raise HTTPException(400, "type: taklif yoki shikoyat bolishi kerak")
+    # Frontend suggestion/complaint -> taklif/shikoyat
+    type_map = {
+        "suggestion": "taklif",
+        "complaint":  "shikoyat",
+        "taklif":     "taklif",
+        "shikoyat":   "shikoyat",
+    }
+    print(f"[Feedback] type={body.type!r}, message={body.message!r}, rating={body.rating}")
+    if body.type not in type_map:
+        raise HTTPException(400, f"type noto'g'ri: {body.type!r}. taklif yoki shikoyat bo'lishi kerak")
+    feedback_type = type_map[body.type]
+
     if not body.message.strip():
-        raise HTTPException(400, "Xabar bosh bolmasligi kerak")
+        raise HTTPException(400, "Xabar bo'sh bo'lmasligi kerak")
     if body.rating and not (1 <= body.rating <= 5):
-        raise HTTPException(400, "Reyting 1-5 orasida bolishi kerak")
+        raise HTTPException(400, "Reyting 1-5 orasida bo'lishi kerak")
 
     with get_db() as conn:
         cur = conn.execute(
             "INSERT INTO feedback (user_id, type, rating, message) VALUES (?,?,?,?)",
-            (current["user_id"], body.type, body.rating, body.message.strip())
+            (current["user_id"], feedback_type, body.rating, body.message.strip())
         )
+        conn.commit()
     return {"id": cur.lastrowid, "success": True}
 
 
@@ -47,6 +60,8 @@ async def my_feedback(current: dict = Depends(get_current_user)):
         ).fetchall()
     return [dict(r) for r in rows]
 
+
+# ── ADMIN ─────────────────────────────────────────────────────
 
 @router.get("/admin/all")
 async def admin_all(current: dict = Depends(get_current_user)):
@@ -62,12 +77,25 @@ async def admin_all(current: dict = Depends(get_current_user)):
     return [dict(r) for r in rows]
 
 
+@router.put("/admin/{feedback_id}")
+async def admin_reply(feedback_id: int, body: AdminReply, current: dict = Depends(get_current_user)):
+    if not current.get("is_admin"):
+        raise HTTPException(403, "Admin huquqi kerak")
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE feedback SET admin_reply=?, status=? WHERE id=?",
+            (body.reply, body.status, feedback_id)
+        )
+        conn.commit()
+    return {"success": True}
+
+
 @router.get("/stats")
 async def feedback_stats():
     with get_db() as conn:
         total       = conn.execute("SELECT COUNT(*) FROM feedback").fetchone()[0]
-        takliflar   = conn.execute("SELECT COUNT(*) FROM feedback WHERE type=\'taklif\'").fetchone()[0]
-        shikoyatlar = conn.execute("SELECT COUNT(*) FROM feedback WHERE type=\'shikoyat\'").fetchone()[0]
+        takliflar   = conn.execute("SELECT COUNT(*) FROM feedback WHERE type='taklif'").fetchone()[0]
+        shikoyatlar = conn.execute("SELECT COUNT(*) FROM feedback WHERE type='shikoyat'").fetchone()[0]
         avg_rating  = conn.execute("SELECT AVG(rating) FROM feedback WHERE rating IS NOT NULL").fetchone()[0]
     return {
         "total":       total,

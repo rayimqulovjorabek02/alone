@@ -51,8 +51,7 @@ export default function Notifications() {
         </div>
       ) : items.map(n => (
         <div key={n.id} onClick={()=>!n.is_read&&markRead(n.id)}
-          style={{ background:'var(--surface)', border:`1px solid ${!n.is_read?'rgba(124,58,237,.3)':'var(--border)'}`, borderRadius:'14px', padding:'14px 16px', marginBottom:'10px', cursor:!n.is_read?'pointer':'default',
-            background:!n.is_read?'rgba(124,58,237,.05)':'var(--surface)' }}>
+          style={{ background:!n.is_read?'rgba(124,58,237,.05)':'var(--surface)', border:`1px solid ${!n.is_read?'rgba(124,58,237,.3)':'var(--border)'}`, borderRadius:'14px', padding:'14px 16px', marginBottom:'10px', cursor:!n.is_read?'pointer':'default' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
             <div style={{ flex:1 }}>
               <div style={{ fontSize:'14px', fontWeight:600, marginBottom:'4px', display:'flex', alignItems:'center', gap:'8px' }}>
