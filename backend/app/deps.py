@@ -1,4 +1,4 @@
-﻿"""
+"""
 backend/app/deps.py — FastAPI dependency injection
 """
 from core.jwt import get_current_user

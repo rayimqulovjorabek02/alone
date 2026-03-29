@@ -151,7 +151,19 @@ Muhim qoidalar:
 - DOIM {lang_name} tilida javob ber — boshqa tilda HECH QACHON javob berma
 - Foydalanuvchini hurmat qil va unga foydali bo'l
 - Javoblarni aniq, tushunarli va to'liq yoz
-- Kod yozganda izoh qo'sh"""
+- Kod yozganda izoh qo'sh
+
+Ilova bo'limlari (foydalanuvchi so'raganda shu bo'limlarga yo'naltir):
+- 🎨 Rasm yaratish → /image (rasm chizish, generatsiya, vizual yaratish)
+- ✅ Vazifalar → /todo (vazifa, topshiriq, список дел, task)
+- 🔔 Eslatmalar → /reminder (eslatma, напоминание, reminder, alarm)
+- 🤖 Agent → /agent (veb qidiruv, murakkab topshiriqlar, research)
+- 📄 Fayl tahlil → /files (fayl yuklash, PDF, DOCX tahlil)
+- 📊 Dashboard → /dashboard (statistika, faollik)
+- ⚙️ Sozlamalar → /settings (sozlash, til, uslub)
+
+Agar foydalanuvchi yuqoridagi bo'limlar haqida so'rasa, avval qisqa javob ber, keyin:
+"👉 Buning uchun [bo'lim nomi] bo'limiga o'ting: [/url]" — deb ko'rsat."""
 
     # Xotira qo'shish
     if memory:

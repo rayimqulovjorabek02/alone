@@ -1,182 +1,460 @@
 ﻿// src/pages/Settings.jsx
-import { useState } from 'react'
-import { useSettingsStore } from '../store/settingsStore'
-import toast from 'react-hot-toast'
+import { useState }          from 'react'
+import { useSettingsStore }  from '../store/settingsStore'
+import { useLang }           from '../i18n/LanguageContext'
+import toast                 from 'react-hot-toast'
+import { Save, Globe, Palette, Mic, Sliders, User, Search, Check } from 'lucide-react'
 
-const LANGUAGES = [
-  { code: 'uz', label: '🇺🇿 O\'zbek' },
-  { code: 'ru', label: '🇷🇺 Русский' },
-  { code: 'en', label: '🇬🇧 English' },
-  { code: 'tr', label: '🇹🇷 Türkçe' },
-  { code: 'ar', label: '🇸🇦 العربية' },
-  { code: 'zh', label: '🇨🇳 中文' },
-  { code: 'de', label: '🇩🇪 Deutsch' },
-  { code: 'fr', label: '🇫🇷 Français' },
-  { code: 'es', label: '🇪🇸 Español' },
-  { code: 'it', label: '🇮🇹 Italiano' },
-  { code: 'pt', label: '🇵🇹 Português' },
-  { code: 'ja', label: '🇯🇵 日本語' },
-  { code: 'ko', label: '🇰🇷 한국어' },
-  { code: 'hi', label: '🇮🇳 हिन्दी' },
-  { code: 'fa', label: '🇮🇷 فارسی' },
-  { code: 'kk', label: '🇰🇿 Қазақша' },
-  { code: 'ky', label: '🇰🇬 Кыргызча' },
-  { code: 'tg', label: '🇹🇯 Тоҷикӣ' },
-  { code: 'az', label: '🇦🇿 Azərbaycan' },
-  { code: 'tk', label: '🇹🇲 Türkmençe' },
-  { code: 'uk', label: '🇺🇦 Українська' },
-  { code: 'pl', label: '🇵🇱 Polski' },
-  { code: 'nl', label: '🇳🇱 Nederlands' },
-  { code: 'sv', label: '🇸🇪 Svenska' },
-  { code: 'no', label: '🇳🇴 Norsk' },
-  { code: 'da', label: '🇩🇰 Dansk' },
-  { code: 'fi', label: '🇫🇮 Suomi' },
-  { code: 'cs', label: '🇨🇿 Čeština' },
-  { code: 'ro', label: '🇷🇴 Română' },
-  { code: 'hu', label: '🇭🇺 Magyar' },
-  { code: 'id', label: '🇮🇩 Bahasa Indonesia' },
-  { code: 'ms', label: '🇲🇾 Bahasa Melayu' },
-  { code: 'th', label: '🇹🇭 ภาษาไทย' },
-  { code: 'vi', label: '🇻🇳 Tiếng Việt' },
-  { code: 'bn', label: '🇧🇩 বাংলা' },
-  { code: 'ur', label: '🇵🇰 اردو' },
-  { code: 'he', label: '🇮🇱 עברית' },
-  { code: 'el', label: '🇬🇷 Ελληνικά' },
-  { code: 'bg', label: '🇧🇬 Български' },
-  { code: 'sr', label: '🇷🇸 Српски' },
-  { code: 'hr', label: '🇭🇷 Hrvatski' },
-  { code: 'sk', label: '🇸🇰 Slovenčina' },
-  { code: 'lt', label: '🇱🇹 Lietuvių' },
-  { code: 'lv', label: '🇱🇻 Latviešu' },
-  { code: 'et', label: '🇪🇪 Eesti' },
-  { code: 'ka', label: '🇬🇪 ქართული' },
-  { code: 'hy', label: '🇦🇲 Հայերեն' },
-  { code: 'sw', label: '🇰🇪 Kiswahili' },
-  { code: 'af', label: '🇿🇦 Afrikaans' },
+
+// ── Interfeys tillari (faqat 3 ta) ───────────────────────────
+const UI_LANGUAGES = [
+  { code: 'uz', label: "O'zbek",  flag: '🇺🇿' },
+  { code: 'ru', label: 'Русский', flag: '🇷🇺' },
+  { code: 'en', label: 'English', flag: '🇬🇧' },
 ]
 
-const STYLES = [
-  ['friendly',     'Do\'stona'],
-  ['professional', 'Professional'],
-  ['funny',        'Quvnoq'],
-  ['strict',       'Qisqa'],
-  ['teacher',      'O\'qituvchi'],
-]
 
-const VOICES = [
-  ['default',     'Standart (Madina)'],
-  ['male',        'Erkak (Sardor)'],
-  ['elevenlabs',  'ElevenLabs (Premium)'],
-]
 
-function Section({ title, children }) {
+// ── Bo'lim komponenti ─────────────────────────────────────────
+function Section({ title, icon: Icon, children, delay }) {
   return (
-    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'16px', padding:'20px', marginBottom:'14px' }}>
-      <h3 style={{ fontSize:'14px', fontWeight:700, marginBottom:'16px', color:'var(--text2)' }}>{title}</h3>
+    <div style={{
+      background:   'var(--surface)',
+      border:       '1px solid var(--border)',
+      borderRadius: 'var(--r-xl)',
+      padding:      '22px',
+      marginBottom: '14px',
+      animation:    `fadeIn 0.35s var(--ease) ${delay || 0}ms both`,
+    }}>
+      <div style={{
+        display:     'flex',
+        alignItems:  'center',
+        gap:         '8px',
+        marginBottom:'18px',
+      }}>
+        <div style={{
+          width:          32,
+          height:         32,
+          borderRadius:   'var(--r-md)',
+          background:     'var(--surface2)',
+          display:        'flex',
+          alignItems:     'center',
+          justifyContent: 'center',
+        }}>
+          <Icon size={15} style={{ color: 'var(--text3)' }} />
+        </div>
+        <h3 style={{ fontSize: '14px', fontWeight: 700 }}>{title}</h3>
+      </div>
       {children}
     </div>
   )
 }
 
-function SelectGroup({ value, options, onChange }) {
-  return (
-    <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
-      {options.map(([val, lbl]) => (
-        <button key={val} onClick={() => onChange(val)}
-          style={{ padding:'7px 14px', borderRadius:'8px', border:`1px solid ${value===val?'var(--accent)':'var(--border)'}`, cursor:'pointer', fontSize:'12px', fontWeight:value===val?700:400,
-            background:value===val?'rgba(124,58,237,.15)':'var(--bg)', color:value===val?'#a78bfa':'var(--text3)' }}>
-          {lbl}
-        </button>
-      ))}
-    </div>
-  )
-}
 
 export default function Settings() {
-  const { settings, save } = useSettingsStore()
-  const [form, setForm]    = useState({ ...settings })
-  const [saving, setSaving]= useState(false)
-  const [langSearch, setLangSearch] = useState('')
+  const { settings, save }          = useSettingsStore()
+  const { t, lang, changeLang }     = useLang()
+  const [form,        setForm]      = useState({ ...settings })
+  const [saving,        setSaving]       = useState(false)
+  const [langSearch,    setLangSearch]   = useState('')
+  const [focused,        setFocused]        = useState(false)
+  const [langFocused,   setLangFocused]  = useState(false)
 
-  const update = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  // Sozlamani yangilash
+  const update = (k, v) => {
+    setForm(f => ({ ...f, [k]: v }))
+    // Faqat interfeys tili o'zgartirsa — UI ni yangilash
+    if (k === 'language') {
+      changeLang(v)
+      localStorage.setItem('lang', v)
+      window.dispatchEvent(new CustomEvent('lang-change', { detail: v }))
+    }
+  }
 
+  // Saqlash
   const handleSave = async () => {
     setSaving(true)
     try {
       await save(form)
-      toast.success("Saqlandi!")
-    } catch { toast.error("Xato") } finally { setSaving(false) }
+      toast.success(t('success') + ' ✓')
+    } catch {
+      toast.error(t('error'))
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const filteredLangs = LANGUAGES.filter(l =>
+  // Til qidirish filtri
+  // Interfeys tili filtri (3 ta)
+  const filteredUILangs = UI_LANGUAGES.filter(l =>
     l.label.toLowerCase().includes(langSearch.toLowerCase()) ||
     l.code.toLowerCase().includes(langSearch.toLowerCase())
   )
 
-  return (
-    <div style={{ padding:'28px 24px', overflowY:'auto', height:'100%', maxWidth:'600px', margin:'0 auto' }}>
-      <h1 style={{ fontSize:'22px', fontWeight:800, marginBottom:'24px' }}>⚙️ Sozlamalar</h1>
 
-      <Section title="👤 Profil">
-        <label style={{ fontSize:'13px', color:'var(--text3)', display:'block', marginBottom:'6px' }}>Ismingiz</label>
+  const selectedLang = UI_LANGUAGES.find(l => l.code === form.language)
+
+  // Ijodkorlik darajasi labeli
+  const tempLabels = {
+    uz: { 0: 'Juda aniq', 0.1: 'Aniq', 0.3: 'Barqaror', 0.5: "O'rtacha", 0.7: 'Erkin', 0.9: 'Ijodiy', 1: 'Maksimal' },
+    ru: { 0: 'Очень точно', 0.1: 'Точно', 0.3: 'Стабильно', 0.5: 'Умеренно', 0.7: 'Свободно', 0.9: 'Творчески', 1: 'Максимально' },
+    en: { 0: 'Very precise', 0.1: 'Precise', 0.3: 'Stable', 0.5: 'Moderate', 0.7: 'Free', 0.9: 'Creative', 1: 'Maximum' },
+  }
+  const tempLabel = (tempLabels[lang] || tempLabels.uz)[form.temperature] || `${form.temperature}`
+
+  // AI uslublari
+  const STYLES = [
+    { value: 'friendly',     emoji: '😊', label: { uz: "Do'stona",    ru: 'Дружелюбный', en: 'Friendly' },     desc: { uz: 'Iliq va samimiy',    ru: 'Тёплый и искренний', en: 'Warm and sincere' } },
+    { value: 'professional', emoji: '💼', label: { uz: 'Professional', ru: 'Профессиональный', en: 'Professional' }, desc: { uz: 'Rasmiy va aniq',   ru: 'Официальный',        en: 'Formal and precise' } },
+    { value: 'funny',        emoji: '😄', label: { uz: 'Quvnoq',       ru: 'Весёлый',     en: 'Funny' },        desc: { uz: 'Hazilkash',          ru: 'С юмором',           en: 'With humor' } },
+    { value: 'strict',       emoji: '⚡', label: { uz: 'Qisqa',        ru: 'Краткий',     en: 'Concise' },      desc: { uz: 'Faqat asosiy',       ru: 'Только главное',     en: 'Just the key points' } },
+    { value: 'teacher',      emoji: '📚', label: { uz: "O'qituvchi",   ru: 'Учитель',     en: 'Teacher' },      desc: { uz: 'Tushuntirib beradi', ru: 'Объясняет подробно', en: 'Explains in detail' } },
+  ]
+
+  // Ovozlar
+  const VOICES = [
+    { value: 'default',    emoji: '🔊', label: { uz: 'Google TTS',  ru: 'Google TTS',  en: 'Google TTS' },  desc: { uz: 'Tabiiy ovoz (bepul)', ru: 'Натуральный голос (бесплатно)', en: 'Natural voice (free)' } },
+    { value: 'elevenlabs', emoji: '✨', label: { uz: 'ElevenLabs',  ru: 'ElevenLabs',  en: 'ElevenLabs' }, desc: { uz: 'Premium sifat',        ru: 'Премиум качество',             en: 'Premium quality' } },
+  ]
+
+  return (
+    <div style={{
+      padding:   '28px 24px',
+      overflowY: 'auto',
+      height:    '100%',
+      maxWidth:  '600px',
+      margin:    '0 auto',
+    }}>
+
+      {/* ── Sarlavha ─────────────────────────────────────────── */}
+      <div style={{ marginBottom: '24px', animation: 'fadeIn 0.3s var(--ease)' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.4px' }}>
+          {t('settings')}
+        </h1>
+        <p style={{ color: 'var(--text3)', fontSize: '13px', marginTop: '4px' }}>
+          { lang === 'uz' && 'AI va interfeys xususiyatlarini sozlang' }
+          { lang === 'ru' && 'Настройте параметры AI и интерфейса' }
+          { lang === 'en' && 'Configure AI and interface settings' }
+        </p>
+      </div>
+
+      {/* ── Ism bo'limi ───────────────────────────────────────── */}
+      <Section title={t('yourName')} icon={User} delay={0}>
+        <label style={{
+          fontSize:      '12px',
+          fontWeight:    600,
+          color:         'var(--text3)',
+          display:       'block',
+          marginBottom:  '7px',
+          letterSpacing: '0.3px',
+          textTransform: 'uppercase',
+        }}>
+          { lang === 'uz' && 'AI sizni qanday chaqirsin?' }
+          { lang === 'ru' && 'Как AI к вам обращается?' }
+          { lang === 'en' && 'How should AI call you?' }
+        </label>
         <input
           value={form.name || ''}
           onChange={e => update('name', e.target.value)}
-          placeholder="Ismingiz"
-          style={{ width:'100%', padding:'10px 14px', background:'var(--bg)', border:'1px solid var(--border)', borderRadius:'10px', color:'var(--text)', fontSize:'14px', outline:'none', boxSizing:'border-box' }}
+          placeholder={
+            lang === 'uz' ? 'Ismingiz...' :
+            lang === 'ru' ? 'Ваше имя...' : 'Your name...'
+          }
+          style={{
+            width:        '100%',
+            padding:      '11px 14px',
+            background:   'var(--bg)',
+            border:       '1px solid var(--border)',
+            borderRadius: 'var(--r-lg)',
+            color:        'var(--text)',
+            fontSize:     '14px',
+            outline:      'none',
+            boxSizing:    'border-box',
+            transition:   'border-color .2s, box-shadow .2s',
+            fontFamily:   'var(--font)',
+          }}
+          onFocus={e => {
+            e.target.style.borderColor = 'var(--accent)'
+            e.target.style.boxShadow   = '0 0 0 3px var(--accent-soft)'
+          }}
+          onBlur={e => {
+            e.target.style.borderColor = 'var(--border)'
+            e.target.style.boxShadow   = 'none'
+          }}
         />
       </Section>
 
-      <Section title="🌍 Til">
-        {/* Qidiruv */}
-        <input
-          value={langSearch}
-          onChange={e => setLangSearch(e.target.value)}
-          placeholder="Til qidirish..."
-          style={{ width:'100%', padding:'8px 12px', background:'var(--bg)', border:'1px solid var(--border)', borderRadius:'8px', color:'var(--text)', fontSize:'13px', outline:'none', boxSizing:'border-box', marginBottom:'10px' }}
-        />
-        {/* Tanlangan til */}
-        {form.language && (
-          <div style={{ fontSize:'12px', color:'var(--text3)', marginBottom:'8px' }}>
-            Tanlangan: <span style={{ color:'#a78bfa', fontWeight:700 }}>
-              {LANGUAGES.find(l => l.code === form.language)?.label || form.language}
-            </span>
+      {/* ── Til bo'limi ───────────────────────────────────────── */}
+      <Section title={t('interfaceLang')} icon={Globe} delay={60}>
+
+        {/* Tanlangan til ko'rsatkichi */}
+        {selectedLang && (
+          <div style={{
+            display:     'inline-flex',
+            alignItems:  'center',
+            gap:         '7px',
+            padding:     '6px 12px',
+            borderRadius:'var(--r-lg)',
+            background:  'var(--accent-soft)',
+            border:      '1px solid rgba(124,58,237,0.2)',
+            marginBottom:'12px',
+            fontSize:    '13px',
+            fontWeight:  600,
+            color:       '#a78bfa',
+          }}>
+            <span>{selectedLang.flag}</span>
+            {selectedLang.label}
+            <Check size={12} />
           </div>
         )}
-        {/* Til ro'yxati */}
-        <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', maxHeight:'200px', overflowY:'auto', padding:'4px 0' }}>
-          {filteredLangs.map(({ code, label }) => (
-            <button key={code} onClick={() => update('language', code)}
-              style={{ padding:'6px 12px', borderRadius:'8px', border:`1px solid ${form.language===code?'var(--accent)':'var(--border)'}`, cursor:'pointer', fontSize:'12px', fontWeight:form.language===code?700:400,
-                background:form.language===code?'rgba(124,58,237,.15)':'var(--bg)', color:form.language===code?'#a78bfa':'var(--text3)', whiteSpace:'nowrap' }}>
-              {label}
-            </button>
-          ))}
+
+        {/* Qidiruv maydoni */}
+        <div style={{ position: 'relative', marginBottom: '10px' }}>
+          <Search size={14} style={{
+            position:      'absolute',
+            left:          11,
+            top:           '50%',
+            transform:     'translateY(-50%)',
+            color:         'var(--text3)',
+            pointerEvents: 'none',
+          }} />
+          <input
+            value={langSearch}
+            onChange={e => setLangSearch(e.target.value)}
+            onFocus={() => setLangFocused(true)}
+            onBlur={() => setLangFocused(false)}
+            placeholder={t('searchLang')}
+            style={{
+              width:        '100%',
+              padding:      '9px 12px 9px 32px',
+              background:   'var(--bg)',
+              border:       `1px solid ${langFocused ? 'var(--accent)' : 'var(--border)'}`,
+              borderRadius: 'var(--r-lg)',
+              color:        'var(--text)',
+              fontSize:     '13px',
+              outline:      'none',
+              boxSizing:    'border-box',
+              transition:   'border-color .2s',
+              fontFamily:   'var(--font)',
+            }}
+          />
+        </div>
+
+        {/* Tillar ro'yxati — faqat 3 ta UI tili */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', padding: '2px' }}>
+          {filteredUILangs.map(({ code, label, flag }) => {
+            const isSelected = form.language === code
+            return (
+              <button
+                key={code}
+                onClick={() => update('language', code)}
+                style={{
+                  display:     'flex',
+                  alignItems:  'center',
+                  gap:         '5px',
+                  padding:     '8px 16px',
+                  borderRadius:'var(--r-md)',
+                  border:      `1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+                  cursor:      'pointer',
+                  fontSize:    '13px',
+                  fontWeight:  isSelected ? 700 : 400,
+                  background:  isSelected ? 'var(--accent-soft)' : 'var(--bg)',
+                  color:       isSelected ? '#a78bfa' : 'var(--text3)',
+                  whiteSpace:  'nowrap',
+                  transition:  'all .15s',
+                  fontFamily:  'var(--font)',
+                }}
+              >
+                <span>{flag}</span>
+                {label}
+                {isSelected && <Check size={13} />}
+              </button>
+            )
+          })}
         </div>
       </Section>
 
-      <Section title="🎭 AI Uslubi">
-        <SelectGroup value={form.ai_style} options={STYLES} onChange={v => update('ai_style', v)} />
+      {/* ── AI Uslubi ─────────────────────────────────────────── */}
+      <Section title={t('aiStyle')} icon={Palette} delay={120}>
+        <div style={{
+          display:             'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+          gap:                 '8px',
+        }}>
+          {STYLES.map(({ value, emoji, label, desc }) => {
+            const isSelected = form.ai_style === value
+            return (
+              <button
+                key={value}
+                onClick={() => update('ai_style', value)}
+                style={{
+                  display:      'flex',
+                  flexDirection:'column',
+                  alignItems:   'flex-start',
+                  gap:          '4px',
+                  padding:      '12px',
+                  borderRadius: 'var(--r-lg)',
+                  border:       `1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+                  cursor:       'pointer',
+                  background:   isSelected ? 'var(--accent-soft)' : 'var(--bg)',
+                  transition:   'all .15s',
+                  textAlign:    'left',
+                  fontFamily:   'var(--font)',
+                }}
+              >
+                <span style={{ fontSize: '20px' }}>{emoji}</span>
+                <span style={{
+                  fontSize:  '13px',
+                  fontWeight: 700,
+                  color:      isSelected ? '#a78bfa' : 'var(--text)',
+                }}>
+                  {label[lang] || label.uz}
+                </span>
+                <span style={{ fontSize: '11px', color: 'var(--text3)' }}>
+                  {desc[lang] || desc.uz}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </Section>
 
-      <Section title="🎙️ Ovoz">
-        <SelectGroup value={form.tts_voice} options={VOICES} onChange={v => update('tts_voice', v)} />
+      {/* ── Ovoz ─────────────────────────────────────────────── */}
+      <Section title={t('ttsVoice')} icon={Mic} delay={180}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {VOICES.map(({ value, emoji, label, desc }) => {
+            const isSelected = form.tts_voice === value
+            return (
+              <button
+                key={value}
+                onClick={() => update('tts_voice', value)}
+                style={{
+                  display:    'flex',
+                  alignItems: 'center',
+                  gap:        '12px',
+                  padding:    '12px 14px',
+                  borderRadius:'var(--r-lg)',
+                  border:     `1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+                  cursor:     'pointer',
+                  background: isSelected ? 'var(--accent-soft)' : 'var(--bg)',
+                  transition: 'all .15s',
+                  fontFamily: 'var(--font)',
+                  textAlign:  'left',
+                }}
+              >
+                <span style={{ fontSize: '22px', width: 32, textAlign: 'center', flexShrink: 0 }}>
+                  {emoji}
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    fontSize:  '13px',
+                    fontWeight: 600,
+                    color:      isSelected ? '#a78bfa' : 'var(--text)',
+                  }}>
+                    {label[lang] || label.uz}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '1px' }}>
+                    {desc[lang] || desc.uz}
+                  </div>
+                </div>
+                {isSelected && (
+                  <div style={{
+                    width:          20,
+                    height:         20,
+                    borderRadius:   '50%',
+                    background:     'var(--accent)',
+                    display:        'flex',
+                    alignItems:     'center',
+                    justifyContent: 'center',
+                    flexShrink:     0,
+                  }}>
+                    <Check size={11} color="white" />
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
       </Section>
 
-      <Section title="🌡️ Ijodkorlik darajasi">
-        <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-          <span style={{ fontSize:'12px', color:'var(--text3)' }}>Aniq</span>
-          <input type="range" min="0" max="1" step="0.1" value={form.temperature}
+      {/* ── Ijodkorlik darajasi ───────────────────────────────── */}
+      <Section title={t('creativity')} icon={Sliders} delay={240}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text3)', width: 60 }}>
+            {t('precise')}
+          </span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value={form.temperature}
             onChange={e => update('temperature', parseFloat(e.target.value))}
-            style={{ flex:1, accentColor:'var(--accent)' }}/>
-          <span style={{ fontSize:'12px', color:'var(--text3)' }}>Ijodiy</span>
-          <span style={{ fontSize:'13px', fontWeight:700, color:'#a78bfa', minWidth:30 }}>{form.temperature}</span>
+            style={{ flex: 1, accentColor: 'var(--accent)', height: '4px' }}
+          />
+          <span style={{ fontSize: '12px', color: 'var(--text3)', width: 60, textAlign: 'right' }}>
+            {t('creative')}
+          </span>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <span style={{
+            display:     'inline-flex',
+            alignItems:  'center',
+            gap:         '6px',
+            padding:     '5px 14px',
+            borderRadius:'100px',
+            background:  'var(--accent-soft)',
+            color:       '#a78bfa',
+            fontSize:    '12px',
+            fontWeight:  700,
+          }}>
+            {tempLabel} — {form.temperature}
+          </span>
         </div>
       </Section>
 
-      <button onClick={handleSave} disabled={saving}
-        style={{ width:'100%', padding:'13px', borderRadius:'12px', border:'none', cursor:'pointer', background:'linear-gradient(135deg,#7c3aed,#6d28d9)', color:'white', fontSize:'14px', fontWeight:700 }}>
-        {saving ? '⏳...' : '💾 Saqlash'}
+      {/* ── Saqlash tugmasi ───────────────────────────────────── */}
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        style={{
+          width:          '100%',
+          padding:        '13px',
+          borderRadius:   'var(--r-lg)',
+          border:         'none',
+          cursor:         saving ? 'not-allowed' : 'pointer',
+          background:     saving ? 'var(--surface3)' : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+          color:          saving ? 'var(--text3)' : 'white',
+          fontSize:       '14px',
+          fontWeight:     700,
+          fontFamily:     'var(--font)',
+          display:        'flex',
+          alignItems:     'center',
+          justifyContent: 'center',
+          gap:            '8px',
+          transition:     'all .2s',
+          boxShadow:      saving ? 'none' : '0 4px 16px rgba(124,58,237,0.35)',
+          animation:      'fadeIn 0.5s var(--ease) 300ms both',
+        }}
+      >
+        {saving ? (
+          <>
+            <span className="animate-spin" style={{
+              width:          16,
+              height:         16,
+              border:         '2px solid rgba(255,255,255,0.3)',
+              borderTopColor: 'white',
+              borderRadius:   '50%',
+              display:        'inline-block',
+            }} />
+            {t('loading')}
+          </>
+        ) : (
+          <>
+            <Save size={16} />
+            {t('saveSettings')}
+          </>
+        )}
       </button>
     </div>
   )

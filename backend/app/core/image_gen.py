@@ -53,6 +53,37 @@ def sanitize_prompt(prompt: str) -> tuple[str, bool]:
     return prompt, False
 
 
+async def translate_to_english(prompt: str) -> str:
+    """Promptni ingliz tiliga tarjima qilish (Groq orqali)."""
+    # Agar allaqachon inglizcha bo'lsa, tarjima qilma
+    latin_ratio = sum(1 for c in prompt if c.isascii() and c.isalpha()) / max(len(prompt), 1)
+    if latin_ratio > 0.7:
+        return prompt
+
+    try:
+        import groq as groq_lib
+        key = os.getenv("GROQ_API_KEY", "")
+        if not key:
+            return prompt
+
+        client = groq_lib.Groq(api_key=key)
+        resp = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{
+                "role": "user",
+                "content": f"Translate this image prompt to English. Return ONLY the translated text, nothing else: {prompt}"
+            }],
+            max_tokens=200,
+            temperature=0.3,
+        )
+        translated = resp.choices[0].message.content.strip()
+        print(f"[Image] Tarjima: '{prompt}' → '{translated}'")
+        return translated
+    except Exception as e:
+        print(f"[Image] Tarjima xato: {e}")
+        return prompt
+
+
 async def generate_image(prompt: str, style: str = "realistic") -> dict:
     # Sanitize
     clean_prompt, is_blocked = sanitize_prompt(prompt)
@@ -62,6 +93,9 @@ async def generate_image(prompt: str, style: str = "realistic") -> dict:
     # Style validatsiya
     if style not in STYLE_PROMPTS:
         style = "realistic"
+
+    # Promptni ingliz tiliga tarjima qilish
+    clean_prompt = await translate_to_english(clean_prompt)
 
     style_suffix = STYLE_PROMPTS[style]
     full_prompt  = f"{clean_prompt}, {style_suffix}"

@@ -64,14 +64,15 @@ async def _reminder_checker():
 
 
 def _check_reminders():
-    """Vaqti kelgan reminderlarni topib notification yuboradi."""
+    """Vaqti kelgan reminderlarni topib notification va email yuboradi."""
     import time
+    import asyncio
     from database import get_db
     now = time.time()
     try:
         with get_db() as conn:
             rows = conn.execute(
-                "SELECT r.*, u.username FROM reminders r "
+                "SELECT r.*, u.username, u.email FROM reminders r "
                 "JOIN users u ON r.user_id = u.id "
                 "WHERE r.remind_at <= ? AND r.is_sent = 0",
                 (now,)
@@ -79,7 +80,7 @@ def _check_reminders():
 
             for row in rows:
                 try:
-                    # Notification yaratish
+                    # In-app notification yaratish
                     conn.execute(
                         "INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)",
                         (
@@ -94,9 +95,26 @@ def _check_reminders():
                         "UPDATE reminders SET is_sent=1 WHERE id=?",
                         (row["id"],)
                     )
-                    print(f"[Reminder] Yuborildi: {row['username']} → {row['title']}")
+                    print(f"[Reminder] Notification: {row['username']} → {row['title']}")
+
+                    # Email yuborish (asinxron)
+                    if row.get("email"):
+                        try:
+                            from core.email_service import send_reminder_email
+                            loop = asyncio.get_event_loop()
+                            loop.create_task(
+                                send_reminder_email(
+                                    row["email"],
+                                    row["title"],
+                                    row["username"]
+                                )
+                            )
+                            print(f"[Reminder] Email task: {row['email']}")
+                        except Exception as e:
+                            print(f"[Reminder] Email xato: {e}")
+
                 except Exception as e:
-                    print(f"[Reminder] Notification xato: {e}")
+                    print(f"[Reminder] Xato: {e}")
             conn.commit()
     except Exception as e:
         print(f"[Reminder] DB xato: {e}")

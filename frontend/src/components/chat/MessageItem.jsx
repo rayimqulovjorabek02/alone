@@ -1,12 +1,16 @@
 // src/components/chat/MessageItem.jsx
-import { useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { useState }            from 'react'
+import { useNavigate }         from 'react-router-dom'
+import ReactMarkdown           from 'react-markdown'
+import remarkGfm               from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { useTTS } from '../../hooks/useTTS'
-import { Copy, Volume2, VolumeX, Check, Sparkles } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { oneDark }             from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { useTTS }              from '../../hooks/useTTS'
+import { Copy, Volume2, VolumeX, Check, Sparkles, ExternalLink } from 'lucide-react'
+import toast                   from 'react-hot-toast'
+
+// Ichki yo'llar (/image, /todo va h.k.)
+const INTERNAL_PATHS = ['/image', '/todo', '/reminder', '/agent', '/files', '/dashboard', '/settings', '/chat', '/premium', '/profile']
 
 // Kod bloki — nusxa olish tugmasi bilan
 function CodeBlock({ language, children }) {
@@ -85,7 +89,8 @@ function CodeBlock({ language, children }) {
 
 export default function MessageItem({ message, isStreaming }) {
   const [copied, setCopied] = useState(false)
-  const isUser = message.role === 'user'
+  const navigate             = useNavigate()
+  const isUser               = message.role === 'user'
   const { speak, stop, isPlaying } = useTTS()
 
   const copyText = () => {
@@ -195,9 +200,42 @@ export default function MessageItem({ message, isStreaming }) {
                   td: ({ children }) => (
                     <td style={{ padding: '6px 12px', borderTop: '1px solid var(--border)' }}>{children}</td>
                   ),
-                  a: ({ children, href }) => (
-                    <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#a78bfa', textDecoration: 'underline', textUnderlineOffset: '2px' }}>{children}</a>
-                  ),
+                  a: ({ children, href }) => {
+                    const isInternal = href && INTERNAL_PATHS.some(p => href === p || href.startsWith(p + '?'))
+                    if (isInternal) {
+                      return (
+                        <button
+                          onClick={() => navigate(href)}
+                          style={{
+                            display:      'inline-flex',
+                            alignItems:   'center',
+                            gap:          '4px',
+                            padding:      '3px 10px',
+                            borderRadius: '100px',
+                            border:       '1px solid rgba(124,58,237,0.4)',
+                            background:   'rgba(124,58,237,0.1)',
+                            color:        '#a78bfa',
+                            fontSize:     '13px',
+                            fontWeight:   600,
+                            cursor:       'pointer',
+                            fontFamily:   'var(--font)',
+                            transition:   'all .15s',
+                            verticalAlign:'middle',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124,58,237,0.2)' }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(124,58,237,0.1)' }}
+                        >
+                          <ExternalLink size={11} />
+                          {children}
+                        </button>
+                      )
+                    }
+                    return (
+                      <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#a78bfa', textDecoration: 'underline', textUnderlineOffset: '2px' }}>
+                        {children}
+                      </a>
+                    )
+                  },
                 }}
               >
                 {message.content}

@@ -1,23 +1,24 @@
 // src/components/chat/ChatInput.jsx
 import { useState, useRef, useEffect } from 'react'
-import { Send, Mic, MicOff, Paperclip, Square } from 'lucide-react'
-import api from '../../api/client'
-import toast from 'react-hot-toast'
+import api                             from '../../api/client'
+import toast                           from 'react-hot-toast'
+import { useLang }                     from '../../i18n/LanguageContext'
+import { Send, Mic, MicOff }           from 'lucide-react'
 
 export default function ChatInput({ onSend, isDisabled }) {
-  const [text,        setText]        = useState('')
-  const [isRecording, setIsRecording] = useState(false)
-  const [isFocused,   setIsFocused]   = useState(false)
-  const textareaRef = useRef(null)
-  const mediaRef    = useRef(null)
-  const chunksRef   = useRef([])
+  const [text,      setText]      = useState('')
+  const [recording, setRecording] = useState(false)
+  const [focused,   setFocused]   = useState(false)
+  const textareaRef               = useRef(null)
+  const mediaRef                  = useRef(null)
+  const chunksRef                 = useRef([])
+  const { lang }                  = useLang()
 
-  // Textarea balandligini matn hajmiga qarab avtomatik o'zgartirish
   useEffect(() => {
-    const el = textareaRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = Math.min(el.scrollHeight, 160) + 'px'
+    const ta = textareaRef.current
+    if (!ta) return
+    ta.style.height = 'auto'
+    ta.style.height = Math.min(ta.scrollHeight, 160) + 'px'
   }, [text])
 
   const handleSend = () => {
@@ -35,145 +36,126 @@ export default function ChatInput({ onSend, isDisabled }) {
   }
 
   const toggleRecording = async () => {
-    if (isRecording) {
+    if (recording) {
       mediaRef.current?.stop()
+      setRecording(false)
       return
     }
     try {
-      const stream   = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream)
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr     = new MediaRecorder(stream)
       chunksRef.current = []
-      recorder.ondataavailable = e => chunksRef.current.push(e.data)
-      recorder.onstop = async () => {
+      mr.ondataavailable = e => chunksRef.current.push(e.data)
+      mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop())
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
         const form = new FormData()
-        form.append('audio', blob, 'recording.webm')
+        form.append('file', blob, 'audio.webm')
+        form.append('lang', lang || 'uz')
         try {
           const { data } = await api.post('/api/voice/stt', form)
-          if (data.text) setText(prev => prev ? prev + ' ' + data.text : data.text)
+          if (data.text) setText(prev => prev + (prev ? ' ' : '') + data.text)
         } catch {
-          toast.error('Ovoz tanilmadi')
+          toast.error(lang === 'ru' ? 'Ошибка распознавания' : lang === 'en' ? 'Recognition error' : "Ovoz tanilmadi")
         }
-        setIsRecording(false)
       }
-      recorder.start()
-      mediaRef.current = recorder
-      setIsRecording(true)
+      mr.start()
+      mediaRef.current = mr
+      setRecording(true)
     } catch {
-      toast.error('Mikrofon ruxsati kerak')
+      toast.error(lang === 'ru' ? 'Микрофон недоступен' : lang === 'en' ? 'Mic unavailable' : "Mikrofon yo'q")
     }
   }
 
-  const canSend = text.trim() && !isDisabled
+  const canSend     = text.trim() && !isDisabled
+  const placeholder = isDisabled
+    ? (lang === 'ru' ? 'AI печатает...'            : lang === 'en' ? 'AI is typing...'          : 'AI javob yozmoqda...')
+    : (lang === 'ru' ? 'Напишите... (Enter — отп.)': lang === 'en' ? 'Type... (Enter to send)'  : 'Xabar yozing... (Enter — yuborish)')
 
   return (
-    <div style={{
-      padding:    '12px 16px 16px',
-      borderTop:  '1px solid var(--border)',
-      background: 'var(--bg)',
-    }}>
-      {/* Yozish maydoni */}
+    <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg)' }}>
       <div style={{
         display:      'flex',
         alignItems:   'flex-end',
         gap:          '8px',
         background:   'var(--surface)',
-        border:       `1px solid ${isFocused ? 'var(--accent)' : 'var(--border)'}`,
+        border:       `1px solid ${focused ? 'var(--accent)' : 'var(--border)'}`,
         borderRadius: 'var(--r-xl)',
-        padding:      '8px 8px 8px 16px',
+        padding:      '8px 10px 8px 14px',
         transition:   'border-color .2s, box-shadow .2s',
-        boxShadow:    isFocused ? '0 0 0 3px var(--accent-soft)' : 'none',
+        boxShadow:    focused ? '0 0 0 3px var(--accent-soft)' : 'none',
       }}>
-
         <textarea
           ref={textareaRef}
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder={isDisabled ? 'AI javob yozmoqda...' : 'Xabar yozing... (Enter — yuborish)'}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder={placeholder}
           disabled={isDisabled}
           rows={1}
           style={{
-            flex:        1,
-            background:  'none',
-            border:      'none',
-            color:       'var(--text)',
-            fontSize:    '14px',
-            resize:      'none',
-            outline:     'none',
-            lineHeight:  1.6,
-            maxHeight:   '160px',
-            fontFamily:  'var(--font)',
-            padding:     '4px 0',
-            overflowY:   'auto',
-            opacity:     isDisabled ? 0.5 : 1,
+            flex:       1,
+            background: 'transparent',
+            border:     'none',
+            outline:    'none',
+            resize:     'none',
+            color:      'var(--text)',
+            fontSize:   '14px',
+            lineHeight: 1.6,
+            fontFamily: 'var(--font)',
+            maxHeight:  '160px',
+            overflowY:  'auto',
+            opacity:    isDisabled ? 0.5 : 1,
+            padding:    '2px 0',
           }}
         />
 
-        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', paddingBottom: '2px' }}>
-          {/* Mikrofon */}
-          <button
-            onClick={toggleRecording}
-            title={isRecording ? 'To\'xtatish' : 'Ovozli xabar'}
-            style={{
-              width:          34,
-              height:         34,
-              borderRadius:   'var(--r-md)',
-              border:         'none',
-              display:        'flex',
-              alignItems:     'center',
-              justifyContent: 'center',
-              background:     isRecording ? 'var(--error-soft)' : 'transparent',
-              color:          isRecording ? 'var(--error)' : 'var(--text3)',
-              transition:     'all .15s',
-              animation:      isRecording ? 'pulse 1.5s ease-in-out infinite' : 'none',
-            }}
-          >
-            {isRecording ? <Square size={15} /> : <Mic size={17} />}
-          </button>
+        <button
+          onClick={toggleRecording}
+          disabled={isDisabled}
+          style={{
+            width:          32, height: 32,
+            borderRadius:   'var(--r-md)',
+            border:         'none',
+            cursor:         isDisabled ? 'not-allowed' : 'pointer',
+            background:     recording ? 'rgba(239,68,68,0.15)' : 'transparent',
+            color:          recording ? '#ef4444' : 'var(--text3)',
+            display:        'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink:     0, transition: 'all .15s',
+          }}
+        >
+          {recording ? <MicOff size={16} /> : <Mic size={16} />}
+        </button>
 
-          {/* Yuborish */}
-          <button
-            onClick={handleSend}
-            disabled={!canSend}
-            title="Yuborish (Enter)"
-            style={{
-              width:          34,
-              height:         34,
-              borderRadius:   'var(--r-md)',
-              border:         'none',
-              display:        'flex',
-              alignItems:     'center',
-              justifyContent: 'center',
-              background:     canSend ? 'var(--accent)' : 'var(--surface2)',
-              color:          canSend ? 'white' : 'var(--text3)',
-              transition:     'all .15s',
-              boxShadow:      canSend ? '0 2px 8px var(--accent-glow)' : 'none',
-              cursor:         canSend ? 'pointer' : 'not-allowed',
-            }}
-          >
-            <Send size={15} style={{ marginLeft: '1px' }} />
-          </button>
-        </div>
+        <button
+          onClick={handleSend}
+          disabled={!canSend}
+          style={{
+            width:          32, height: 32,
+            borderRadius:   'var(--r-md)',
+            border:         'none',
+            cursor:         !canSend ? 'not-allowed' : 'pointer',
+            background:     canSend ? 'var(--accent)' : 'transparent',
+            color:          canSend ? 'white' : 'var(--text3)',
+            display:        'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink:     0, transition: 'all .15s',
+            boxShadow:      canSend ? '0 2px 8px var(--accent-glow)' : 'none',
+          }}
+        >
+          <Send size={15} />
+        </button>
       </div>
 
-      {/* Qisqa yo'riqnoma */}
-      <div style={{
-        display:        'flex',
-        justifyContent: 'center',
-        marginTop:      '8px',
-        gap:            '16px',
-      }}>
-        <span style={{ fontSize: '11px', color: 'var(--text3)' }}>
+      <div style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: '11px', color: 'var(--text3)', paddingLeft: '4px' }}>
+        <span>
           <kbd style={{ background: 'var(--surface2)', padding: '1px 5px', borderRadius: '4px', fontSize: '10px' }}>Enter</kbd>
-          {' '}yuborish
+          {' '}{ lang === 'ru' ? '— отправить' : lang === 'en' ? '— send' : '— yuborish' }
         </span>
-        <span style={{ fontSize: '11px', color: 'var(--text3)' }}>
+        <span>
           <kbd style={{ background: 'var(--surface2)', padding: '1px 5px', borderRadius: '4px', fontSize: '10px' }}>Shift+Enter</kbd>
-          {' '}yangi qator
+          {' '}{ lang === 'ru' ? '— новая строка' : lang === 'en' ? '— new line' : '— yangi qator' }
         </span>
       </div>
     </div>

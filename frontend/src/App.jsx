@@ -2,6 +2,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { LanguageProvider } from './i18n/LanguageContext'
+import { useState, useEffect } from 'react'
+import Onboarding from './components/Onboarding'
 
 // Auth pages
 import Login          from './pages/Login'
@@ -47,6 +49,21 @@ function AdminRoute({ children }) {
 }
 
 export default function App() {
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const isAuth = useAuthStore((s) => s.isAuthenticated())
+
+  useEffect(() => {
+    // Faqat yangi foydalanuvchilar uchun — localStorage da belgisi yo'q bo'lsa
+    if (isAuth && !localStorage.getItem('onboarding_done')) {
+      setShowOnboarding(true)
+    }
+  }, [isAuth])
+
+  const closeOnboarding = () => {
+    localStorage.setItem('onboarding_done', '1')
+    setShowOnboarding(false)
+  }
+
   return (
     <LanguageProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

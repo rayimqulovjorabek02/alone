@@ -1,4 +1,4 @@
-﻿"""
+"""
 backend/app/config.py
 Barcha sozlamalar — faqat shu yerdan o'qiladi
 

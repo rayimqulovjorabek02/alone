@@ -95,38 +95,31 @@ async def text_to_speech(body: TTSRequest, current: dict = Depends(get_current_u
 
     text = clean_for_tts(body.text)[:3000]
 
-    # 1. OpenAI TTS (eng ishonchli)
-    audio_b64 = await _openai_tts(text)
-    if audio_b64:
-        increment_usage(current["user_id"], "voice")
-        return {"audio_b64": audio_b64, "engine": "openai-tts"}
-
-    # 2. ElevenLabs
+    # 1. ElevenLabs (premium)
     eleven_key = _elevenlabs_key()
-    if eleven_key:
+    if eleven_key and body.gender == 'elevenlabs':
         audio_b64 = await _elevenlabs_tts(text, api_key=eleven_key)
         if audio_b64:
             increment_usage(current["user_id"], "voice")
             return {"audio_b64": audio_b64, "engine": "elevenlabs"}
 
-    # 3. Edge TTS
-    audio_b64 = await _edge_tts(text, lang=body.lang, gender=body.gender, speed=body.speed)
-    if audio_b64:
-        increment_usage(current["user_id"], "voice")
-        return {"audio_b64": audio_b64, "engine": "edge-tts"}
-
-    # 4. gTTS (ru/en fallback)
+    # 2. Google TTS (eng sifatli bepul)
     audio_b64 = _gtts(text, lang=body.lang, slow=(body.speed == "slow"))
     if audio_b64:
         increment_usage(current["user_id"], "voice")
         return {"audio_b64": audio_b64, "engine": "gtts"}
 
-    # 5. gTTS ru (oxirgi fallback)
-    if body.lang != "ru":
-        audio_b64 = _gtts(text, lang="ru", slow=False)
-        if audio_b64:
-            increment_usage(current["user_id"], "voice")
-            return {"audio_b64": audio_b64, "engine": "gtts-ru"}
+    # 3. Edge TTS (fallback)
+    audio_b64 = await _edge_tts(text, lang=body.lang, gender=body.gender, speed=body.speed)
+    if audio_b64:
+        increment_usage(current["user_id"], "voice")
+        return {"audio_b64": audio_b64, "engine": "edge-tts"}
+
+    # 4. OpenAI TTS
+    audio_b64 = await _openai_tts(text)
+    if audio_b64:
+        increment_usage(current["user_id"], "voice")
+        return {"audio_b64": audio_b64, "engine": "openai-tts"}
 
     raise HTTPException(500, "TTS ishlamadi")
 

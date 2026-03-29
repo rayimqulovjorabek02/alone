@@ -155,6 +155,16 @@ def init_db():
                 expires_at         REAL
             );
 
+            CREATE TABLE IF NOT EXISTS subscription_requests (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                plan       TEXT    NOT NULL,
+                note       TEXT    DEFAULT '',
+                status     TEXT    DEFAULT 'pending',
+                created_at REAL    DEFAULT (unixepoch()),
+                updated_at REAL    DEFAULT (unixepoch())
+            );
+
             -- Indekslar
             CREATE INDEX IF NOT EXISTS idx_chat_user    ON chat_history(user_id);
             CREATE INDEX IF NOT EXISTS idx_chat_session ON chat_history(session_id);
@@ -198,9 +208,11 @@ def _migrate_tables(conn):
         ("notifications", "type",     "ALTER TABLE notifications ADD COLUMN type TEXT DEFAULT 'info'"),
         ("notifications", "is_read",  "ALTER TABLE notifications ADD COLUMN is_read INTEGER DEFAULT 0"),
         # user_settings
-        ("user_settings", "name",        "ALTER TABLE user_settings ADD COLUMN name TEXT DEFAULT ''"),
-        ("user_settings", "temperature", "ALTER TABLE user_settings ADD COLUMN temperature REAL DEFAULT 0.7"),
-        ("user_settings", "tts_voice",   "ALTER TABLE user_settings ADD COLUMN tts_voice TEXT DEFAULT 'default'"),
+        ("user_settings", "name",          "ALTER TABLE user_settings ADD COLUMN name TEXT DEFAULT ''"),
+        ("user_settings", "temperature",   "ALTER TABLE user_settings ADD COLUMN temperature REAL DEFAULT 0.7"),
+        ("user_settings", "tts_voice",     "ALTER TABLE user_settings ADD COLUMN tts_voice TEXT DEFAULT 'default'"),
+        ("user_settings", "chat_language", "ALTER TABLE user_settings ADD COLUMN chat_language TEXT DEFAULT 'uz'"),
+        ("reminders",     "sent",          "ALTER TABLE reminders ADD COLUMN sent INTEGER DEFAULT 0"),
         # feedback
         ("feedback", "status",      "ALTER TABLE feedback ADD COLUMN status TEXT DEFAULT 'new'"),
         ("feedback", "admin_reply", "ALTER TABLE feedback ADD COLUMN admin_reply TEXT"),
